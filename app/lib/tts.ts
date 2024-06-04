@@ -48,7 +48,7 @@ export async function downloadWords(words: string[]): Promise<{ status?: string,
   if (needWords.length === 0) {
     return { status: 'no need to download' };
   }
-  // console.log("needWords", needWords)
+  console.log("needWords", needWords)
 
   // Create an array of promises for each word download
   const downloadPromises = needWords.map(async (word) => {
@@ -81,9 +81,9 @@ async function downloadGC(text: string, outputFile: any , cb: any) {
   });
 
   //local storage
-  const writeFile = util.promisify(fs.writeFile);
-  await writeFile(outputFile, response.audioContent, 'binary');
-  console.log(`Audio content written to file: ${outputFile}`);
+  // const writeFile = util.promisify(fs.writeFile);
+  // await writeFile(outputFile, response.audioContent, 'binary');
+  // console.log(`Audio content written to file: ${outputFile}`);
 
   // supabase
   const audioContent = response.audioContent as Uint8Array;
