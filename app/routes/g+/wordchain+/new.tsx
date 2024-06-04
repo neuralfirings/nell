@@ -2,9 +2,9 @@ import { json, redirect, ActionFunction, ActionFunctionArgs, LoaderFunction, Loa
 import { useActionData, useLoaderData, Form, useNavigation} from '@remix-run/react'
 import { Container, Paper, Button, Alert, Title, Text, Anchor, Space, Stack, Input, TextInput } from '@mantine/core'
 
-import { getUserInfo } from '@/app/lib/auth';
+import { getUserInfo, sessionToUserInfo } from '@/app/lib/auth';
 import { createSupabaseServerClient } from '@/app/supabase.server';
-import { newWordChainGameData } from '@/app/lib/miranda';
+import { getProgress, newWordChainGameData } from '@/app/lib/miranda';
 import { NewWordChainGameButton } from '@/app/components/wordChainComponents';
 import { LoadingScreen } from '@/app/components/utils';
 // import { useTransition } from 'react';
@@ -30,6 +30,27 @@ export const action: ActionFunction = async ({ request }: ActionFunctionArgs) =>
   }
   else {
     // create game_data object, maybe call a prompt function or something
+    console.log("Feeling lucky!!")// new word chain game")
+    // const await getProgress(request, "early_literacy")
+
+    // // get logged in account
+    // const { data: userInfo, error: userInfoError } = await getUserInfo(request)
+    // if (userInfoError) return redirect('/login')
+    // console.log("userInfo", userInfo)
+    // return null
+
+    // const formData = new FormData();
+    // formData.append('subject', 'early_literacy');
+    // formData.append('accountId', String(userInfo?.profileId));
+    // const response = await fetch('/api/getprogress', { method: 'POST', body: formData});
+    // if (!response.ok) {
+    //   console.error('Error:', response.status);
+    //   throw new Error('Network response was not ok: ' + response.status);
+    // }
+    // const data = await response.json();
+    // console.log("PROGRESS >>>>", data)
+
+
     gameData = await newWordChainGameData(request)
   }
 

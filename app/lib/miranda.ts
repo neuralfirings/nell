@@ -1,11 +1,14 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { RiTruckLine } from "react-icons/ri";
-import { getUserInfo } from '@/app/lib/auth';
-import { createSupabaseServerClient } from "@/app/supabase.server";
+import { getUserInfo, sessionToUserInfo } from '@/app/lib/auth';
+import { createSupabaseServerClient, createSuperbaseClient } from "@/app/supabase.server";
 import { ActionFunctionArgs } from "@remix-run/node";
-import { delay } from "./utils";
+import { prependToFile } from "./utils.server";
 import { decode } from "./decode";
 import { sqidify } from "./utils.server";
+import OpenAI from "openai";
+
+const openai = new OpenAI();
 
 export async function loadGameSession( gameSessionId: number, copy: boolean, request: any) {
   const { supabaseClient } = createSupabaseServerClient(request)
@@ -74,13 +77,73 @@ export function generatePromptForReading(readerName: string, subjects: string, g
   return prompt
 }
 
+export function testFS() {
+  prependToFile("/logs/claude.log", "Hello World!")
+}
+
+export async function generateGPTReponse(prompt: string) {
+  if (true) {
+    const gptOutput = {
+      "id": "chatcmpl-9WX1Ir5272P816jU3WiPSA15Z9jDP",
+      "object": "chat.completion",
+      "created": 1717540452,
+      "model": "gpt-4o-2024-05-13",
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": "{\"wordChain\":[\"bad\",\"sad\",\"dad\",\"had\",\"ham\",\"jam\"],\"conceptExplanation\":\"This is a fake GPT response. Want a real one? Turn off the fake toggle in generateGPTReponse function.\"}"
+          },
+          "logprobs": null,
+          "finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 4091,
+        "completion_tokens": 62,
+        "total_tokens": 4153
+      },
+      "system_fingerprint": "fp_319be4768e"
+    }
+    return { error: null, data: JSON.parse(gptOutput.choices[0].message.content ?? '')}
+  }
+
+
+  const gptInput: any = {
+    messages: [
+      { 
+        role: "system", 
+        content: "You are an early literacy teacher who is expert in the science of reading. You write decodeable texts for children to learn to read that's aligned with the science of reading." 
+      },
+      {
+        role: "user",
+        content: [
+          {
+            type: "text",
+            text: prompt
+          }
+        ]
+      }
+    ],
+    model: "gpt-4o",
+  }
+  
+  const gptOutput = await openai.chat.completions.create(gptInput);
+
+  console.log("GPT Input >> ", gptInput);
+  console.log("GPT Output >> ", gptOutput);
+  prependToFile("./logs/gpt.log", JSON.stringify({time: new Date(), input: gptInput, output: gptOutput}, null, 2)+'\n')
+
+  return { error: null, data: JSON.parse(gptOutput.choices[0].message.content ?? '')}
+}
 
 export async function generateClaudeResponse(prompt: string) {
   const anthropic = new Anthropic({
     apiKey: process.env.ANTHROPIC_API_KEY,
   });
   
-  const msg = await anthropic.messages.create({
+  const claudeInput: any = {
     model: "claude-3-haiku-20240307",
     max_tokens: 4000,
     temperature: 0.5,
@@ -105,12 +168,15 @@ export async function generateClaudeResponse(prompt: string) {
         ]
       }
     ]
-  });
+  }
+  const claudeOutput = await anthropic.messages.create(claudeInput);
 
-  console.log("Claude Output >> ", msg);
+  console.log("Claude Input >> ", claudeInput);
+  console.log("Claude Output >> ", claudeOutput);
+  prependToFile("./logs/claude.log", JSON.stringify({time: new Date(), input: claudeInput, output: claudeOutput}, null, 2)+'\n')
 
   // TODO: Error handling!
-  return { "error": false, "data": JSON.parse("{"+msg.content[0].text) }
+  return { "error": null, "data": JSON.parse("{"+claudeOutput.content[0].text) }
 }
 
 // * Work Input Model
@@ -120,79 +186,18 @@ export async function generateClaudeResponse(prompt: string) {
 // * Work UI
 // * Curriculum
 
-type workInputExample = {
-  wordChain: string[]
-  conceptExplanation: string
-}
-
-let workInputExamples: workInputExample[] = [
+const WORD_CHAIN_EXAMPLES = [
   {
     "wordChain": ["cat", "bat", "hat", "hot", "hop", "pop"],
-    "conceptExplanation": "These words help practice the short /o/ and /a/ sound."
+    "conceptExplanation": "Based on your progress, you need some help with short vowels. Let's focus on the short vowel sounds today, like /o/ and /a/."
   },
   {
     "wordChain": ["made", "make", "cake", "lake", "late", "mate"],
-    "conceptExplanation": "These words help pratice the long /a/ with magic e."
+    "conceptExplanation": "Based on your progress, you are doing great with short vowels and consonant blends. However, you seem to struggle with long vowels with magic e. Let's pratice the long /a/ with magic e today."
   }
 ]
-
-let progressReportExamples = [
-  {
-    "gameResults": {
-    },
-  }
-]
-
-// export type workInput = {
-//   wordChain: string[]
-//   conceptExplanation: string
-// }
-
-let studentProgress = [
-  {
-    "game": {
-      "wordChain": ["cat", "bat", "hat", "hot", "hop", "pop"],
-      "conceptExplanation": "These words help practice the short /o/ and /a/ sound.",
-      "date": "2022-02-02",
-    },
-    "results": [
-      {
-        "ask": "decode",
-        "stem": "cat",
-        // "subtitute": "bat",
-        "correct": true
-      },
-      {
-        "ask": "encode",
-        "stem": "bat",
-        "subtitute": "hat",
-        "correct": false
-      }
-    ]
-  }
-]
-
-let p = {
-  "focusConcepts": ["short /o/ and /a/ sound", "digraphs like /sh/ and /ch/"],
-  "workInputExamples": [
-    {
-      "wordChain": ["cat", "bat", "hat", "hot", "hop", "pop"],
-      "conceptExplanation": "These words help practice the short /o/ and /a/ sound."
-    },
-    {
-      "wordChain": ["made", "make", "cake", "lake", "late", "mate"],
-      "conceptExplanation": "These words help pratice the long /a/ with magic e."
-    }
-  ]
-}
-
-let prompts = {
-  "studentProgress": "This represents what the student has done so far. ask=decode means blah blah, ask=encode means blah blah. %%studentProgress%%",
-  "workInput": {
-    "instructions": `Word Chains games allow a child to focus on sounds without the distraction of graphemes, as each sound is represented by a counter. A single phoneme is changed and the child re-blends to make a new word.\n\nGenerate a word chain that practices these concepts: ${p.focusConcepts.join(", ")}.\n\n`,
-    "requirements": ["thing one", "thing two"],
-    "examples": `Here are some examples of what you can do. \n\n ${p.workInputExamples.map((e) => { return '<example>\n' + JSON.stringify(e, null, 2) + '\n</example>\n\n' })}`
-  },
+const PROMPT_LIST = {
+  "createWordChainGame": `Your task is to create a Word Chain Game for this child, and return a JSON object. When creating a game, keep in mind the child's current literacy level, and create a game to challenge the child and help them learn new concepts. If they've mastered CVC words, they should progress to consonant blends. If they have show to struggle with CVC, given them more practice with CVC words. Here is a progression to follow: short vowels (CVC), consonant blends (CCVC, CVCC), digraphs, long vowels with magic e, r controlled vowels, long vowel teams, other vowel teams, diphthongs, silent letters, suffixes and prefixes, low frequency spelling.\n\nWord Chains games allow a child to focus on sounds without the distraction of graphemes, as each sound is represented by a counter. A single phoneme is changed and the child re-blends to make a new word. The word chain should contain no repeated words.\n\nHere are some examples showing the structure of JSON you should return. The content of the JSON object should be adapted to the child's level. \n\n${WORD_CHAIN_EXAMPLES.map((e) => { return '<example>\n' + JSON.stringify(e, null, 2) + '\n</example>\n\n' })}Return just the JSON object without any pre-amble. Return only the minified JSON object without any markdown tags.`,
   "progressReport": {
     "instructions": "Generate a progress report for the student. Format it like so.",
     "examples": "Here is an example of what you can do. %%studentProgress%%"
@@ -202,73 +207,84 @@ let prompts = {
 // <WordChainWork />: AI(workInputPrompt) --> UI(workInput)
 // <WordChainProgressReport />: AI(progressReportPrompt) --> UI(progressReport)
 // <WordChainWorkSetup />
-const fake_game_data = {
-  "wordChain": [
-    {
-        "word": "cat",
-        "status": "new",
-        "task": "decode"
-    },
-    {
-        "word": "rat",
-        "status": "new",
-        "task": "decode"
-    },
-    {
-        "word": "bat",
-        "status": "new",
-        "task": "decode"
-    },
-    {
-        "word": "hat",
-        "status": "new",
-        "task": "decode"
-    },
-    {
-        "word": "hot",
-        "status": "new",
-        "task": "decode"
-    },
-    {
-      "word": "dot",
-      "status": "new",
-      "task": "decode"
-    },
-    {
-      "word": "dog",
-      "status": "new",
-      "task": "decode"
-    },
-    {
-      "word": "dug",
-      "status": "new",
-      "task": "decode"
-    },
-    {
-      "word": "rug",
-      "status": "new",
-      "task": "decode"
-    }
-  ],
-  "conceptExplanation": "These words practice the /a/ and /o/ sounds."
-}
-export async function newWordChainGameData(request: any, gameData: any | null = fake_game_data) {
-  // await delay(1000)
+const fake_game_data = { "wordChain": [ { "word": "cat", "status": "new", "task": "decode" }, { "word": "rat", "status": "new", "task": "decode" }, { "word": "bat", "status": "new", "task": "decode" }, { "word": "hat", "status": "new", "task": "decode" }, { "word": "hot", "status": "new", "task": "decode" }, { "word": "dot", "status": "new", "task": "decode" }, { "word": "dog", "status": "new", "task": "decode" }, { "word": "dug", "status": "new", "task": "decode" }, { "word": "rug", "status": "new", "task": "decode" } ], "conceptExplanation": "These words practice the /a/ and /o/ sounds." }
+
+function composeProgressPrompt(subject: any, progressData: any, game: string) {
+  let prompt = `Here is some data which shows a child's ability engage in ${subject}.\n\n${JSON.stringify(progressData)}\n\n`
   
-  // fake_game_data = {
-  //   "wordChain": [{"word":"dog","phonemes":["D","AO","G"],"decoded":[["d","D"],["o","AO"],["g","G"]],"task":"decode","status":"new"},{"word":"cat","phonemes":["K","AE","T"],"decoded":[["c","K"],["a","AE"],["t","T"]],"task":"decode","status":"new"},{"word":"run","phonemes":["R","AH","N"],"decoded":[["r","R"],["u","AH"],["n","N"]],"task":"decode","status":"new"},{"word":"jump","phonemes":["JH","AH","M","P"],"decoded":[["j","JH"],["u","AH"],["m","M"],["p","P"]],"task":"decode","status":"new"},{"word":"happy","phonemes":["HH","AE","P","IY"],"decoded":[["h","HH"],["a","AE"],["pp","P"],["y","IY"]],"task":"decode","status":"new"},{"word":"green","phonemes":["G","R","IY","N"],"decoded":[["g","G"],["r","R"],["ee","IY"],["n","N"]],"task":"decode","status":"new"},{"word":"funny","phonemes":["F","AH","N","IY"],"decoded":[["f","F"],["u","AH"],["nn","N"],["y","IY"]],"task":"decode","status":"new"},{"word":"play","phonemes":["P","L","EY"],"decoded":[["p","P"],["l","L"],["ay","EY"]],"task":"decode","status":"new"},{"word":"friend","phonemes":["F","R","EH","N","D"],"decoded":[["f","F"],["r","R"],["i","?"],["e","EH"],["n","N"],["d","D"]],"task":"decode","status":"new"},{"word":"sunshine","phonemes":["S","AH","N","SH","AY","N"],"decoded":[["s","S"],["u","AH"],["n","N"],["sh","SH"],["i","AY"],["n","N"],["e","*"]],"task":"decode","status":"new"}],
-  //   "conceptExplanation": "These words get harder and harder"
-  // }
+  const { tasks, assists } =  getUniqueTasksAndAssists(progressData)
+  
+  prompt += `For the task object, `
+  tasks.forEach((task: any) => {
+    if (task == "wordChainDecode") {
+      prompt += `"wordChainDecode" means the child has been asked to read the word after hearing a similar word that has one phoneme different than this word. `
+    }
+    else if (task == "read") {
+      prompt += `"read" means the child was asked to read the word.`
+    }
+  })
+  prompt += `\n\n`
 
+  prompt += `For the assist object, `
+  assists.forEach((assist: any) => {
+    if (assist == "heard_sound_out") {
+      prompt += `"heard_sound_out" means the child heard the phonemes of the word as help. `
+    }
+  })
 
+  return prompt
+}
 
+function getUniqueTasksAndAssists(data: any) {
+  const tasks = new Set();
+  const assists = new Set();
+
+  data.forEach((item: any)=> {
+    if (item.task) {
+      tasks.add(item.task);
+    }
+    
+    if (item.assists) {
+      item.assists.forEach((assist: any) => {
+        assists.add(assist);
+      });
+    }
+  });
+
+  return {
+    tasks: Array.from(tasks),
+    assists: Array.from(assists)
+  };
+}
+
+export async function newWordChainGameData(request: any, gameData: any | null = null) {
+  // generate AI if gameData = null
+  console.log("newWordChainGameData", gameData)
+  if (gameData == null) {
+    // generate AI for gameData
+    console.log("Miranda is feeling lucky!! She's gonna talk to Claude...")
+    const { data: progressData, error: progressError } = await getProgress(request, "early_literacy")
+    if (progressError) throw new Error(progressError.message)
+    
+    let prompt = ""
+    prompt += composeProgressPrompt("early_literacy", progressData, "wordchain") + '\n\n'
+    // console.log("prompt", prompt)"
+    
+    prompt += '\n\n' + PROMPT_LIST.createWordChainGame
+
+    // console.log('prompt', prompt)
+    const { data: claudeResponseData, error: claudeResponseError } = await generateGPTReponse(prompt) //generateClaudeResponse(prompt)
+    console.log('Claud says', claudeResponseData, claudeResponseError)
+    claudeResponseData.wordChain = claudeResponseData.wordChain.map((e: any) => { return {"word": e, "status": "new", "task": "decode"} })
+    console.log('cleaned up game data', claudeResponseData)
+    gameData = claudeResponseData
+  }  
+
+  // decode the words
   const words =gameData.wordChain.map((e: any) => e.word)
   const decodeDict = await decode(words, request)
   gameData.wordChain = gameData.wordChain.map((e: any) => { return {...e, "phonemes": decodeDict[e.word].phonemes, "decoded": decodeDict[e.word].decoded} }) 
   // console.log("decodeDict", decodeDict)
-
-
-  // TODO: replace with real data
 
   return gameData
 }
@@ -281,4 +297,17 @@ export async function saveWordChainGameData(request: any, game_session: any) {
     .eq('id', game_session.id)
   if (error) return { success: false, error: error }
   return { success: true }
+}
+
+async function getProgress(request: any, subject: string) {
+  const { supabaseClient } = createSupabaseServerClient(request)
+  const {data: userInfo} = await getUserInfo(request)
+  const { data: progressData, error: progressError } = await supabaseClient.from("progress")
+    .select("timestamp, task, word, completed, assists")
+    .eq('subject', subject)
+    .eq('account_id', userInfo?.profileId)
+    .order('timestamp', { ascending: false })
+    .limit(100)
+  progressData?.filter((item: any) => item.task != null && item.completed != null)
+  return { data: progressData, error: progressError }
 }

@@ -24,7 +24,8 @@ export const action: ActionFunction = async ({ request }: ActionFunctionArgs) =>
       word: e.word ,
       decoded: e.decoded,
       completed: e.status == "couldNotRead" ? false : true,
-      assists: e.status == "readWithHelp" || e.status == "couldNotRead" ? ["heard_sound_out"] : []
+      assists: e.status == "readWithHelp" || e.status == "couldNotRead" ? ["heard_sound_out"] : [],
+      subject: "early_literacy"
     }))
   console.log("progressRows", progressRows)
   const { error: userProgressError } = await supabaseClient

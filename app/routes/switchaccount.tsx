@@ -11,15 +11,20 @@ import { SignOutButton } from '../components/signOutButton';
 
 
 export const action: ActionFunction = async ({ request }: ActionFunctionArgs) => {
-  const { supabaseClient } = createSupabaseServerClient(request)
+  const { supabaseClient, headers } = createSupabaseServerClient(request)
   const { supAdmin } = createSuperbaseClient()
   const formData = await request.formData()
   const formDataObj = Object.fromEntries(formData)
   console.log(formDataObj, formDataObj.user2 == "self")
   const account_uid = formData.get('account_uid') as string
-  const logInAs = formDataObj.user2 == "self" ? null : { 
+  const logInAs = formDataObj.user2 == "self" ? {
+    id: Number(formData.get('user1_id')), 
+    name: formData.get('user1_name'),
+    isChild: false,
+  } : { 
     id:  Number(formData.get('user2_id')), 
-    name: formData.get('user2_name') 
+    name: formData.get('user2_name') ,
+    isChild: true
   }
   console.log("logInAs", logInAs  )
 
@@ -28,10 +33,14 @@ export const action: ActionFunction = async ({ request }: ActionFunctionArgs) =>
     { app_metadata: { logInAs: logInAs} }
   );
   if (appUpdateError) return {"actionSuccess": false, "error": appUpdateError}
-  console.log("adminResponse", appUpdateData, appUpdateError)
+  // console.log("adminResponse", appUpdateData, appUpdateError)
 
-  const { error: getUserInfoError, headers } = await getUserInfo(request, true)
-  if (getUserInfoError) return {"actionSuccess": false, "error": getUserInfoError}
+  const { data: sessionRefreshData, error: sessionRefreshError } = await supabaseClient.auth.refreshSession()
+  if (sessionRefreshError) return {"actionSuccess": false, "error": sessionRefreshError}
+  // const { session, user } = data
+
+  // const { error: getUserInfoError, headers } = await getUserInfo(request, true)
+  // if (getUserInfoError) return {"actionSuccess": false, "error": getUserInfoError}
 
   // return redirect('/dashboard')
   return redirect('/dashboard', { headers })
@@ -101,6 +110,8 @@ export default function Page() {
                 <Form method="post">
                   <input type="hidden" name="_action" value="loginas" />
                   <input type="hidden" name="user2" value="self" />
+                  <input type="hidden" name="user1_id" value={loaderData.account[0].id} />
+                  <input type="hidden" name="user1_name" value={loaderData.user.user_metadata.name} />
                   <input type="hidden" name="account_uid" value={loaderData.account[0].user_id} />
                   <Button key="self" variant="primary" mt="md" type="submit">Self</Button>
                 </Form>

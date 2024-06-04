@@ -1,11 +1,6 @@
 import { Links, Meta, Outlet, Scripts, ScrollRestoration, MetaFunction, useRouteError, isRouteErrorResponse } from "@remix-run/react";
 import type { LoaderFunction } from "@remix-run/node";
-import { ChakraProvider, extendTheme } from '@chakra-ui/react'
 import '@fontsource-variable/lexend';
-
-import { rootAuthLoader } from "@clerk/remix/ssr.server";
-import { ClerkApp } from "@clerk/remix";
-
 import "@mantine/core/styles.css";
 import { MantineProvider, ColorSchemeScript, createTheme, Container } from "@mantine/core";
 
@@ -36,14 +31,10 @@ export const meta: MetaFunction = () => {
   ];
 };
 
-export const loader: LoaderFunction = (args) => rootAuthLoader(args);
-// export const loader: LoaderFunction = (args) => {
-//   return rootAuthLoader(args, ({ request }) => {
-//     const { sessionId, userId, getToken } = request.auth;
-//     // fetch data
-//     return { yourData: 'here' };
-//   });
-// }
+// export const loader: LoaderFunction = (args) => rootAuthLoader(args);
+export const loader: LoaderFunction = (args) => {
+  return {}
+}
 
 export function Layout({ children }: { children: React.ReactNode }) {
   return (
@@ -92,8 +83,8 @@ export function ErrorBoundary() {
   }
 
   // Don't forget to typecheck with your own logic.
-  // Any value can be thrown, not just errors!
-  let errorMessage = error.message ||  "Unknown error";
+  // Any value can be thrown, not just errors
+  // let errorMessage = error?.message ||  "Unknown error";
   // if (isDefinitelyAnError(error)) {
   //   errorMessage = error.message;
   // }
@@ -102,7 +93,7 @@ export function ErrorBoundary() {
     <Container>
     <h1>Uh oh.. something went wrong. 🤮</h1>
       <p>Error boundary triggered</p>
-      <p>Thrown Error Message: {errorMessage}</p>
+      <p>Thrown Error Message: {error?.message}</p>
     </Container>
   );
 }

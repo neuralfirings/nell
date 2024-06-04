@@ -2,13 +2,26 @@ import { createSupabaseServerClient } from '@/app/supabase.server'
 import { getSession, commitSession } from '@/app/sessions';
 
 type UserInfo = {
-  userLogInAs: any,
+  // userLogInAs: any,
   accountName: string,
   profileName: string,
   profileId: number,
   isChild: boolean
 }
 
+export function sessionToUserInfo(session: any) {
+  const user = session.session ? session.session.user : session.user
+  // console.log("session", session)
+  // console.log("user >>", user)
+  
+  return {
+    // userLogInAs: user.app_metadata.logInAs, 
+    accountName: user.user_metadata.name, 
+    profileName: user.app_metadata.logInAs.name,
+    profileId: user.app_metadata.logInAs.id, 
+    isChild: user.app_metadata.logInAs.isChild
+  }
+}
 
 export async function getUserInfo(request: any, forceRefresh: boolean = false): 
   Promise<{ 
@@ -18,6 +31,41 @@ export async function getUserInfo(request: any, forceRefresh: boolean = false):
     source?: string | null
   }> 
 {
+  const { supabaseClient, headers } = createSupabaseServerClient(request)
+
+  const { data: sessionData, error: sessionError } = await supabaseClient.auth.getSession()
+  // console.log("in userInfo", sessionData, sessionError)
+  if (sessionError) { return { data: null, error: sessionError.message} }
+
+  if ( sessionData.session == null) {
+    return { data: null, error: "User not authenticated",  headers}
+  }
+  else if (sessionData.session.user.app_metadata.logInAs == null) {
+    const user = sessionData.session.user
+    const { data: accountData, error: accountError } = await supabaseClient.from("accounts")
+      .select("id")
+      .eq("user_id", user.id)
+    if (accountError) { return { data: null, error: accountError.message} }
+    const userInfo = {
+      accountName: user.user_metadata.name, 
+      profileName: user.user_metadata.name,
+      profileId: accountData[0].id,
+      isChild: false
+    }
+    return {data: userInfo, error: null, headers: headers, source: "session"}
+  }
+  else {
+    const user =  sessionData.session.user
+    const userInfo = {
+      accountName: user.user_metadata.name, 
+      profileName: user.app_metadata.logInAs.name,
+      profileId: user.app_metadata.logInAs.id, 
+      isChild: user.app_metadata.logInAs.isChild
+    }
+    // console.log("userInfo", userInfo)
+    return { data: userInfo, error: null, headers: headers, source: "session"}
+  }
+
   // check if session exists first
   const session = await getSession(request.headers.get('Cookie'));
   const userSessionData = session.get('userData');
@@ -28,7 +76,6 @@ export async function getUserInfo(request: any, forceRefresh: boolean = false):
   }
 
   // if no session, continue to auth from supabase
-  const { supabaseClient } = createSupabaseServerClient(request)
   const { data: { user } } = await supabaseClient.auth.getUser() 
 
   // if logged out

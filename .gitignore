@@ -9,3 +9,4 @@ node_modules
  **/.DS_Store
 /public/audio/words
 /app/routes/test+
+/logs

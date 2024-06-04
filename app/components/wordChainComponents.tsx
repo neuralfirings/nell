@@ -3,7 +3,7 @@
 // <WordChainWorkSetup />
 
 import { useEffect, useRef, useState } from "react";
-import { Form } from "@remix-run/react";
+import { Form, useHref, useLocation, useMatches } from "@remix-run/react";
 import { Anchor, Button, Group, Code, Title, Paper, Space, Alert, Text, Flex, Modal, Center, Box, Stack } from "@mantine/core";
 import { FaCheck, FaCheckDouble } from "react-icons/fa6";
 import { FaInfoCircle, FaUndo } from "react-icons/fa";
@@ -12,7 +12,7 @@ import { NellWordDisplay } from "@/app/components/nellUI";
 import { playAudio } from "@/app/lib/utils";
 import { PHONEME_AUDIO_LENGTH, SLOW_SOUND_OUT, FAST_SOUND_OUT, MEDIUM_SOUND_OUT } from "@/app/lib/configs";
 
-
+const SUPA_WORD_FP = "https://fdyaqvgimrebqczodjqq.supabase.co/storage/v1/object/public/nell/words"
 
 export function NewWordChainGameButton({text, variant="white"}: {text: string, variant: string}) {
   return (
@@ -26,7 +26,7 @@ export function NewWordChainGameButton({text, variant="white"}: {text: string, v
 
 // TODO: activeGames type
 export function WordChainGameUI({data}: {data: any}) {
-  console.log("WordChainGameUI Render", data)
+  // console.log("WordChainGameUI Render", data)
   const maxWordIdx = data.game_data.wordChain.length - 1
   const [wordIdx, setWordIdx] = useState(1)
   const word =  data.game_data.wordChain[wordIdx] 
@@ -37,18 +37,20 @@ export function WordChainGameUI({data}: {data: any}) {
   // handleWordTransition(wordIdx, wordIdx + 1, true);
 
   // #region download audio
-  const allWords = data.game_data.wordChain.map((link: any) => link.word)
-  console.log("all words in game", allWords)
-  const formData = new FormData();
-  formData.append('text', allWords.join(" "))
-  fetch('/api/tts', { method: 'POST', body: formData})
-    .then(response => {
-      if (!response.ok) { throw new Error('Network response was not ok'); }
-      return response.json();
-    })
-    // .then(data => { console.log('Response data:', data); })
-    .then(data)
-    .catch(error => { console.error('Error:', error); });
+  if (typeof process === "undefined") {
+    const allWords = data.game_data.wordChain.map((link: any) => link.word)
+    // console.log("all words in game", allWords)
+    const formData = new FormData();
+    formData.append('text', allWords.join(" "))
+    fetch('/api/tts', { method: 'POST', body: formData})
+      .then(response => {
+        if (!response.ok) { throw new Error('Network response was not ok'); }
+        return response.json();
+      })
+      // .then(data => { console.log('Response data:', data); })
+      .then(data)
+      .catch(error => { console.error('Error:', error); });
+  }
   // #endregion
 
   // #region enable audio for ios
@@ -137,7 +139,8 @@ export function WordChainGameUI({data}: {data: any}) {
     // const idx2 = wordIdx+1
     setWordIdx(idx1)
     await playAudio(`/audio/instructions/wc_wordis.mp3`)
-    await playAudio(`/audio/words/${data.game_data.wordChain[idx1].word}.mp3`)
+    // await playAudio(`/audio/words/${data.game_data.wordChain[idx1].word}.mp3`)
+    await playAudio(`${SUPA_WORD_FP}/${data.game_data.wordChain[idx1].word}.mp3`)
     await playAudio(`/audio/instructions/wc_ifchange.mp3`)
     const phDiff = detectPhonemeDiff(data.game_data.wordChain[idx1].decoded, data.game_data.wordChain[idx2].decoded)[0] // assume one for now
     await playAudio(`/audio/phonemes/${phDiff[0][1]}.mp3`, PHONEME_AUDIO_LENGTH / FAST_SOUND_OUT)

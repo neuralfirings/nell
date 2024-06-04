@@ -23,23 +23,22 @@ export const action: ActionFunction = async ({ request }: ActionFunctionArgs) =>
 }
 
 export const loader: LoaderFunction = async  ({ request }: LoaderFunctionArgs) => {
-  const { data, error } = await getUserInfo(request)
-  if (error) { return redirect('/login') } // redirect to login if not authenticated
-  return json(data)
+  const { data: userInfo, error: userInfoError} = await getUserInfo(request)
+  if (userInfoError) { return redirect('/login') }
+  return json({userInfo})
 }
 
 export default function Page() {
   const actionData = useActionData<typeof action>();
   const loaderData = useLoaderData<typeof loader>();
-  const userLogInAs = loaderData.userLogInAs
-  const accountName = loaderData.accountName
+  const userInfo = loaderData.userInfo
 
   return (
     <Container>
       <Header 
         pageTitle="Dashboard"
-        name={userLogInAs == null ? accountName: userLogInAs.name} 
-        child={userLogInAs != null}
+        name={userInfo.profileName} 
+        child={userInfo.isChild}
       />
       <Divider my="md" />
 

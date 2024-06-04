@@ -6,11 +6,11 @@ import { downloadWords } from '@/app/lib/tts.ts'
 
 export const action: ActionFunction = async ({ request }: ActionFunctionArgs) => {
   const formData = await request.formData()
-  console.log('formData', Object.fromEntries(formData))
+  // console.log('formData', Object.fromEntries(formData))
   const txt = formData.get('text') as string
   const words = txt.split(" ")
   const result =  await downloadWords(words)
-  console.log('result', result)
+  // console.log('result', result)
   return result
 }
 

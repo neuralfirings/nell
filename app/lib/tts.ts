@@ -2,6 +2,7 @@ import fs from 'fs'
 import textToSpeech from '@google-cloud/text-to-speech';
 import { getDateTime } from '@/app/lib/utils'
 import util from 'util'
+import { createSupabaseServerClient, createSuperbaseClient } from '../supabase.server';
 
 const WORDS_DIR = "./public/audio/words/"
 const INSTRUCTIONS_DIR = "./public/audio/instructions/"
@@ -43,10 +44,11 @@ export async function downloadInstructions(instructions: instructionsTTSRequest[
 }
 
 export async function downloadWords(words: string[]): Promise<{ status?: string, description?: string, error?: any }>{
-  let needWords = checkIfFileExists(words, WORDS_DIR);
+  let needWords = await checkIfFileExists(Array.from(new Set(words)), WORDS_DIR);
   if (needWords.length === 0) {
     return { status: 'no need to download' };
   }
+  // console.log("needWords", needWords)
 
   // Create an array of promises for each word download
   const downloadPromises = needWords.map(async (word) => {
@@ -77,23 +79,53 @@ async function downloadGC(text: string, outputFile: any , cb: any) {
     voice: {languageCode: 'en-US', ssmlGender: 'FEMALE', name: 'en-US-Standard-C'}, 
     audioConfig: {audioEncoding: 'MP3'},
   });
+
+  //local storage
   const writeFile = util.promisify(fs.writeFile);
   await writeFile(outputFile, response.audioContent, 'binary');
   console.log(`Audio content written to file: ${outputFile}`);
+
+  // supabase
+  const audioContent = response.audioContent as Uint8Array;
+  const audioBuffer = new Uint8Array(audioContent);
+  const { supAdmin } = createSuperbaseClient();
+  const { data, error } = await supAdmin.storage
+    .from('nell')
+    .upload(outputFile.replace("./public/audio/", ""), audioBuffer);
+  console.log("supabase upload", data, error)
+
+  // callback
 	cb()
 }
 
 // check if words exists in audio folder
-function checkIfFileExists(words: string[], dir: string) {
-	let haveWords = fs.readdirSync(dir)
-	let needWords = []
-	for (let i = 0; i < words.length; i++) {
-		words[i] = words[i].toLowerCase()
-		if (!haveWords.includes(words[i] + ".mp3")) {
-			needWords.push(words[i])
-		}
-	}
-	return needWords
+async function checkIfFileExists(words: string[], dir: string) {
+	// let haveWords = fs.readdirSync(dir)
+	// let needWords = []
+	// for (let i = 0; i < words.length; i++) {
+	// 	words[i] = words[i].toLowerCase()
+	// 	if (!haveWords.includes(words[i] + ".mp3")) {
+	// 		needWords.push(words[i])
+	// 	}
+	// }
+
+	// return needWords
+
+  // supabase
+  console.log("checkIfFileExists", words, dir)
+  const { supAdmin } = createSuperbaseClient();
+  const existingFiles: string[] = [];
+  const directory = dir.replace("./public/audio/", "")
+  const { data, error } = await supAdmin
+    .storage
+    .from("nell")
+    .list(directory);
+  if (error) { throw new Error(error.message); }
+  // console.log("supabase list", data, error)
+  const existingWords = data.map((file: any) => file.name.replace(".mp3", ""));
+  const needWords = words.filter(word => !existingWords.includes(word));
+  // console.log("existing > words > need", existingWords, words, needWords)
+  return needWords
 }
 
 // async function downloadWords(words, callback) {

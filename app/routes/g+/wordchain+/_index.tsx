@@ -37,7 +37,7 @@ export const loader: LoaderFunction = async  ({ request }: LoaderFunctionArgs) =
   // return json)
 
   const activeGames = await getActiveGames(Number(process.env.NELL_WORDCHAIN_ID), request)
-  console.log("wordchain/_index > loader", activeGames)
+  // console.log("wordchain/_index > loader", activeGames)
 
   if (activeGames.length == 0) {return ({ showNewGame: true })}
 
@@ -48,10 +48,10 @@ export const loader: LoaderFunction = async  ({ request }: LoaderFunctionArgs) =
     item.phonemes.forEach(phoneme => phonemes.add(phoneme));
   });
   const allPhonemesArr = Array.from(phonemes);
-  console.log("allPhonemesArr", allPhonemesArr)
+  // console.log("allPhonemesArr", allPhonemesArr)
   
 
-  console.log("activeGames", activeGames)
+  // console.log("activeGames", activeGames)
   return json({ "activeGames": activeGames, "phonemes": allPhonemesArr, "showNewGame": false })
 }
 

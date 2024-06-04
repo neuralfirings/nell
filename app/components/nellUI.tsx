@@ -54,7 +54,8 @@ export function NellWordDisplay({keyProp, word, decoded, status, onHelpActionRef
   // say the word
   const handleSayWordClick = (word: string) => {
     console.log("handleSayWordClick", word)
-    const audio = new Audio(`/audio/words/${word}.mp3`);
+    // const audio = new Audio(`/audio/words/${word}.mp3`);
+    const audio = new Audio(`${process.env.SUPABASE_WORD_URL}/${word}.mp3`);
     // audio.playbackRate = 1500 / 800
     audio.play()
   }

@@ -5,9 +5,8 @@ import { Container, Paper, Button, Alert, Title, Text, Anchor, Space, Divider } 
 import { createSupabaseServerClient } from '@/app/supabase.server'
 import { Header } from '@/app/components/header';
 
-import { WordChainWork } from '@/app/components/wordChainComponents';
 
-import { getUserInfo, doesSomething } from '@/app/lib/auth';
+import { getUserInfo } from '@/app/lib/auth';
 
 
 export const action: ActionFunction = async ({ request }: ActionFunctionArgs) => {
@@ -17,7 +16,7 @@ export const action: ActionFunction = async ({ request }: ActionFunctionArgs) =>
 export const loader: LoaderFunction = async  ({ request }: LoaderFunctionArgs) => {
   const { data: userInfo, error: userInfoError} = await getUserInfo(request)
   if (userInfoError) { return redirect('/login') }
-  return json({userInfo: userInfo})
+  return json({userInfo})
 }
 
 export default function Page() {

@@ -7,7 +7,7 @@ import { Alert, Code, Container, Space } from '@mantine/core'
 import Login from './test+/supabase+/sessionlogin'
 
 export const action = async ({ request }: ActionFunctionArgs) => {
-  const { supabaseClient } = createSupabaseServerClient(request)
+  const { supabaseClient, headers } = createSupabaseServerClient(request)
   const { supAdmin } = createSuperbaseClient()
   // console.log("old header >>>>>>", headers)
 
@@ -33,8 +33,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
   // localStorage.removeItem('supabase.auth.token');
   
-  const {  error: getUserInfoError, headers } = await getUserInfo(request, true) 
-  if (getUserInfoError && getUserInfoError != "User not authenticated") return json({ success: false, error: getUserInfoError })
+  // const {  error: getUserInfoError, headers } = await getUserInfo(request, true) 
+  // if (getUserInfoError && getUserInfoError != "User not authenticated") return json({ success: false, error: getUserInfoError })
 
   return redirect('/', { headers })
   // return redirect('/', {headers})
