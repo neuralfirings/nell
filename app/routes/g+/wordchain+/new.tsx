@@ -4,7 +4,7 @@ import { Container, Paper, Button, Alert, Title, Text, Anchor, Space, Stack, Inp
 
 import { getUserInfo, sessionToUserInfo } from '@/app/lib/auth';
 import { createSupabaseServerClient } from '@/app/supabase.server';
-import { getProgress, newWordChainGameData } from '@/app/lib/miranda';
+import { newWordChainGameData } from '@/app/lib/miranda';
 import { NewWordChainGameButton } from '@/app/components/wordChainComponents';
 import { LoadingScreen } from '@/app/components/utils';
 // import { useTransition } from 'react';

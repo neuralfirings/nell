@@ -82,7 +82,8 @@ export function testFS() {
 }
 
 export async function generateGPTReponse(prompt: string) {
-  if (true) {
+  console.log("in environment", process.env.NODE_ENV)
+  if (process.env.NODE_ENV == "development") {
     const gptOutput = {
       "id": "chatcmpl-9WX1Ir5272P816jU3WiPSA15Z9jDP",
       "object": "chat.completion",

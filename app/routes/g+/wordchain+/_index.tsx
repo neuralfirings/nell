@@ -44,8 +44,8 @@ export const loader: LoaderFunction = async  ({ request }: LoaderFunctionArgs) =
   // continue if there are activaGames, but just return the first one for now
   const activeGame = activeGames[0]
   const phonemes = new Set();
-  activeGame.game_data.wordChain.forEach(item => {
-    item.phonemes.forEach(phoneme => phonemes.add(phoneme));
+  activeGame.game_data.wordChain.forEach((item: any) => {
+    item.phonemes.forEach((phoneme: any) => phonemes.add(phoneme));
   });
   const allPhonemesArr = Array.from(phonemes);
   // console.log("allPhonemesArr", allPhonemesArr)

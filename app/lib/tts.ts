@@ -15,7 +15,7 @@ type instructionsTTSRequest = {
 export async function downloadInstructions(instructions: instructionsTTSRequest[]): Promise<{ status?: string, description?: string, error?: any }> {
   console.log('instructions', instructions)
   const names = instructions.map(e => e.name);
-  let needInstructions = checkIfFileExists(names, INSTRUCTIONS_DIR);
+  let needInstructions = await checkIfFileExists(names, INSTRUCTIONS_DIR);
   console.log("needInstructions", needInstructions)
   if (needInstructions.length === 0) {
     return { status: 'no need to download' };
