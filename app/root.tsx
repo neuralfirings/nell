@@ -1,5 +1,5 @@
 import { Links, Meta, Outlet, Scripts, ScrollRestoration, MetaFunction, useRouteError, isRouteErrorResponse } from "@remix-run/react";
-import type { LoaderFunction } from "@remix-run/node";
+import type { LinksFunction, LoaderFunction } from "@remix-run/node";
 import '@fontsource-variable/lexend';
 import "@mantine/core/styles.css";
 import { MantineProvider, ColorSchemeScript, createTheme, Container } from "@mantine/core";
@@ -28,6 +28,20 @@ export const meta: MetaFunction = () => {
       content: "width=device-width,initial-scale=1",
     },
     { title: "Nell" },
+  ];
+};
+
+export const links: LinksFunction = () => {
+  const favicon = process.env.NODE_ENV === 'production'
+    ? '/favicon.ico'
+    : '/favicon-dev.ico';
+
+  return [
+    {
+      rel: "icon",
+      href: favicon,
+      type: "image/x-icon",
+    }
   ];
 };
 

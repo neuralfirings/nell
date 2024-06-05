@@ -191,7 +191,6 @@ function findDiffIndices(ref: string[], compare: string[]): number[] {
   let compareExploded = compare.map(element => element.split('+')).flat()
   let diffIndices = [];
 
-  // START HERE
   for (let i = 0, rIdx=0, cIdx=0; i<100 && cIdx<compareExploded.length ; i++, cIdx++, rIdx++) {
     if (ref[rIdx] != compareExploded[cIdx]) {
       diffIndices.push(cIdx)

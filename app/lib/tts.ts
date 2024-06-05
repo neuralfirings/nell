@@ -54,11 +54,14 @@ export async function downloadWords(words: string[]): Promise<{ status?: string,
   const downloadPromises = needWords.map(async (word) => {
     word = word.toLowerCase();
     let filepath = WORDS_DIR + word + ".mp3";
+    console.log("about to call downloadGC", word, filepath)
     await downloadGC(word, filepath, function (err: any) {
+      console.log('in downloadGC callback')
       if (err) {
         console.log("downloadGC Error", err);
         throw err; // Throw the error to reject the promise
       }
+      console.log("downloadGC success", word, filepath)
     });
   });
 
@@ -74,11 +77,13 @@ export async function downloadWords(words: string[]): Promise<{ status?: string,
 
 const clientTTS = new textToSpeech.TextToSpeechClient();
 async function downloadGC(text: string, outputFile: any , cb: any) {
+  console.log('in downloadGC', text)
   const [response] = await clientTTS.synthesizeSpeech({
     input: {text: text},
     voice: {languageCode: 'en-US', ssmlGender: 'FEMALE', name: 'en-US-Standard-C'}, 
     audioConfig: {audioEncoding: 'MP3'},
   });
+  console.log('in downloadGC 2', text)
 
   //local storage
   // const writeFile = util.promisify(fs.writeFile);
@@ -86,8 +91,10 @@ async function downloadGC(text: string, outputFile: any , cb: any) {
   // console.log(`Audio content written to file: ${outputFile}`);
 
   // supabase
+  console.log('in downloadGC 3', text)
   const audioContent = response.audioContent as Uint8Array;
   const audioBuffer = new Uint8Array(audioContent);
+  console.log('in downloadGC 4', text)
   const { supAdmin } = createSuperbaseClient();
   const { data, error } = await supAdmin.storage
     .from('nell')
