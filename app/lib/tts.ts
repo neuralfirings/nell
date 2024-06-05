@@ -78,17 +78,17 @@ export async function downloadWords(words: string[]): Promise<{ status?: string,
 const clientTTS = new textToSpeech.TextToSpeechClient();
 async function downloadGC(text: string, outputFile: any , cb: any) {
   console.log('in downloadGC 1', text)
-  try {
+  // try {
     const [response] = await clientTTS.synthesizeSpeech({
       input: {text: text},
       voice: {languageCode: 'en-US', ssmlGender: 'FEMALE', name: 'en-US-Standard-C'}, 
       audioConfig: {audioEncoding: 'MP3'},
     });
     console.log('in downloadGC 2', text)
-  }
-  catch (err) {
-    console.error('Error in downloadGC', err)
-  }
+  // }
+  // catch (err) {
+  //   console.error('Error in downloadGC', err)
+  // }
 
   //local storage
   // const writeFile = util.promisify(fs.writeFile);
