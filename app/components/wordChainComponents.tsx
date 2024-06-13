@@ -34,7 +34,6 @@ export function WordChainGameUI({data}: {data: any}) {
   const [gameEnded, setGameEnded] = useState(false);
   const [newGame, setNewGame] = useState(true);
 
-  // handleWordTransition(wordIdx, wordIdx + 1, true);
 
   // #region download audio
   if (typeof process === "undefined") {

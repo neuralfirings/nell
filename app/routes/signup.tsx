@@ -34,7 +34,14 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   if (error) {
     return json({ success: false }, { headers })
   }
-  return redirect('/dashboard', {
+
+  // create account
+  const { data: accountData, error: accountError } = await supabaseClient
+    .from('accounts')
+    .insert({ user_id: data?.user?.id, is_teacher: true})
+
+  //
+  return redirect('/configure', {
     headers,
   })
 }

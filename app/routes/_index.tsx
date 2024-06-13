@@ -1,5 +1,5 @@
-import { Container, Title, Anchor, Space } from '@mantine/core';
-import { Link } from '@remix-run/react';
+import { Container, Title, Anchor, Space, Button, Divider } from '@mantine/core';
+import { Form, Link } from '@remix-run/react';
 
 export default function Index() {
   return (
@@ -10,6 +10,11 @@ export default function Index() {
         <Anchor mr="md" href="/login">Log In</Anchor>
         <Anchor mr="md" href="/signup">Sign Up</Anchor>
         <Anchor mr="md" href="/dashboard">Dashboard</Anchor>
+
+        <Divider my="lg" />
+        <Form method="post" action="/logout">
+          <Button type="submit" variant="transparent" mr="md" href="/logout">Log Out</Button>
+        </Form>
     </Container>
   );
 }

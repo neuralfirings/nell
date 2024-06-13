@@ -1,6 +1,8 @@
 import { Form, Link } from "@remix-run/react";
 import { Group, Text, Button, Anchor, Title} from '@mantine/core';
 import { NewWordChainGameButton } from "./wordChainComponents";
+import { getUserInfo } from "../lib/auth";
+import { LoaderFunction, LoaderFunctionArgs } from "@remix-run/node";
 
 export function Header({ pageTitle, name, child }: { pageTitle: string, name: string, child: boolean }) {
   return (
@@ -12,7 +14,7 @@ export function Header({ pageTitle, name, child }: { pageTitle: string, name: st
             {pageTitle == "Word Chain" && <NewWordChainGameButton variant="transparent" text="I'm feeling lucky" />}
           </Group>
           <Group justify="end" align="center">
-            <Text>Hello {name}</Text>
+            <Text>Hi, {name}</Text>
             <Anchor component={Link} to="/dashboard">Dashboard</Anchor>     
             {!child && (
               <>

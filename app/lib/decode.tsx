@@ -2,7 +2,7 @@ import { levenshteinDistance } from '@/app/lib/utils';
 // import { connectToDatabase } from "@/app/lib/mongodb"
 import {TextPhonemeObject, graphemePhonemePair, decodedWord, graphemePhonemeObject} from '@/app/definitions'
 
-import { createSupabaseServerClient } from '@/app/supabase.server'
+import { createSupabaseServerClient, createSuperbaseClient } from '@/app/supabase.server'
 import { LoaderFunctionArgs } from '@remix-run/node';
 import { IsAny } from 'mongodb';
 
@@ -18,17 +18,17 @@ const DEBUG = false
 
 // let db: any // MongoDB
 let supabaseClient: any // Supabase
-export async function decode(words: string[], request: any) {
-  console.log("decode function", words, new Date().toLocaleTimeString())
+export async function decode(words: string[]) {
+  // console.log("decode function", words, new Date().toLocaleTimeString())
 
-  const { supabaseClient } = await createSupabaseServerClient(request)
+  const { supAdmin } = await createSuperbaseClient()
 
   let txtPhObj: TextPhonemeObject = getPhonemes(words)
 
   let out: { [key: string]: decodedWord } = {}
 
 
-  const {data: g2p} = await supabaseClient
+  const {data: g2p} = await supAdmin
     .from('g2p')
     .select('*')
 
@@ -77,7 +77,7 @@ async function decodeWord(word: string, ph: string[], g2p: any): Promise<graphem
   
   // ex soundMap (w = "car")
   // => [ [ [ 'c', 'K' ] ], [ [ 'ar', 'AA+R' ], [ 'a' , 'AA' ] ], [ [ 'r', 'R' ] ] ]
-  let soundMap = []
+  let soundMap: any[] = []
   for (let i = 0; i < g2p.length; i++) {
     let regex = new RegExp(g2p[i].regex)
     let text = g2p[i].text
@@ -89,7 +89,7 @@ async function decodeWord(word: string, ph: string[], g2p: any): Promise<graphem
       let indices = indexOfAll(w, regex)
       indices.map((i) => {
         if (soundMap[i] == undefined) soundMap[i] = []
-        soundsInWord.map((s) => { soundMap[i].push([text, s]) })
+        soundsInWord.map((s: any) => { soundMap[i].push([text, s]) })
       })
     }
   }

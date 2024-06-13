@@ -2,11 +2,11 @@ import Anthropic from "@anthropic-ai/sdk";
 import { RiTruckLine } from "react-icons/ri";
 import { getUserInfo, sessionToUserInfo } from '@/app/lib/auth';
 import { createSupabaseServerClient, createSuperbaseClient } from "@/app/supabase.server";
-import { ActionFunctionArgs } from "@remix-run/node";
 import { prependToFile } from "./utils.server";
 import { decode } from "./decode";
 import { sqidify } from "./utils.server";
 import OpenAI from "openai";
+import { ActionFunctionArgs } from "@remix-run/node";
 
 const openai = new OpenAI();
 
@@ -77,9 +77,69 @@ export function generatePromptForReading(readerName: string, subjects: string, g
   return prompt
 }
 
+
 export function testFS() {
   prependToFile("/logs/claude.log", "Hello World!")
 }
+
+// #region GENERIC
+// TODO: wordchain to use this
+const SYSTEM_CONTENTS: any = {
+  "early_literacy": "You are an early literacy teacher who is expert in the science of reading. You write decodeable texts for children to learn to read that's aligned with the science of reading."
+}
+export async function generateNewGameGPT({subject, prompt, request}: {subject: string, prompt: string, request: any}) {
+  // fake data for dev
+  if (false && process.env.NODE_ENV == "development") {
+    console.log("FAKE IT TIL YOU MAKE IT!")
+    // const progressData = await getProgress(request, subject)
+    // if (progressData.error) return { error: progressData.error }
+    // console.log("error", progressData.data)
+    // const progressPrompt = composeProgressPrompt(subject, progressData.data)
+    // console.log("progressPrompt", progressPrompt)
+    // await new Promise(r => setTimeout(r, 1000))
+    const referer = request.headers.get("referer")
+    if (referer.includes("/g/stories")) {
+      return {
+        data: {
+          "pages": [
+            "At art mat."
+          ],
+          "conceptExplanation": "This story practices short vowel sounds and CVC word patterns, which are aligned with the phonemic concepts Ajax has been working on, such as bat and hot. The story also helps reinforce blending and decoding skills by using simple, repetitive words and phrases."
+        }
+      }
+    }
+
+    return { error: `No fake data available for ${referer}`}
+  }
+
+  // get progress for the subject
+  const progressData = await getProgress(request, subject)
+  if (progressData.error) return { error: progressData.error }
+  const progressPrompt = composeProgressPrompt(subject, progressData.data)
+  console.log("progressPrompt", progressPrompt)
+
+  // ask GPT
+  const gptInput: any = {
+    model: "gpt-4o",
+    messages: [
+      { role: "system", content: SYSTEM_CONTENTS[subject] },
+      { role: "user", content: [ 
+        { type: "text", text: progressPrompt },
+        { type: "text", text: prompt } 
+      ] }
+    ]
+  }
+  console.log("GPT Input >> ", gptInput);
+  const gptOutput = await openai.chat.completions.create(gptInput);
+  console.log("GPT Output >> ", gptOutput);
+
+  // Save to log
+  prependToFile("./logs/gpt.log", JSON.stringify({time: new Date(), input: gptInput, output: gptOutput}, null, 2)+'\n')
+
+  // return the data
+  return { data: JSON.parse(gptOutput.choices[0].message.content ?? '')}
+}
+// #endregion
 
 export async function generateGPTReponse(prompt: string) {
   console.log("in environment", process.env.NODE_ENV)
@@ -109,7 +169,6 @@ export async function generateGPTReponse(prompt: string) {
     }
     return { error: null, data: JSON.parse(gptOutput.choices[0].message.content ?? '')}
   }
-
 
   const gptInput: any = {
     messages: [
@@ -210,10 +269,10 @@ const PROMPT_LIST = {
 // <WordChainWorkSetup />
 const fake_game_data = { "wordChain": [ { "word": "cat", "status": "new", "task": "decode" }, { "word": "rat", "status": "new", "task": "decode" }, { "word": "bat", "status": "new", "task": "decode" }, { "word": "hat", "status": "new", "task": "decode" }, { "word": "hot", "status": "new", "task": "decode" }, { "word": "dot", "status": "new", "task": "decode" }, { "word": "dog", "status": "new", "task": "decode" }, { "word": "dug", "status": "new", "task": "decode" }, { "word": "rug", "status": "new", "task": "decode" } ], "conceptExplanation": "These words practice the /a/ and /o/ sounds." }
 
-function composeProgressPrompt(subject: any, progressData: any, game: string) {
+function composeProgressPrompt(subject: any, progressData: any) {
   let prompt = `Here is some data which shows a child's ability engage in ${subject}.\n\n${JSON.stringify(progressData)}\n\n`
   
-  const { tasks, assists } =  getUniqueTasksAndAssists(progressData)
+  const { tasks } =  getUniqueTasksAndAssists(progressData)
   
   prompt += `For the task object, `
   tasks.forEach((task: any) => {
@@ -226,12 +285,14 @@ function composeProgressPrompt(subject: any, progressData: any, game: string) {
   })
   prompt += `\n\n`
 
-  prompt += `For the assist object, `
-  assists.forEach((assist: any) => {
-    if (assist == "heard_sound_out") {
-      prompt += `"heard_sound_out" means the child heard the phonemes of the word as help. `
-    }
-  })
+  prompt += `For the assist object: \n`
+  prompt += `- "heard_sound_out" means the child heard the phonemes of the word as help.\n`
+  prompt += `- "heard_word" means the child heard the word read out loud as help.\n`
+  // assists.forEach((assist: any) => {
+  //   if (assist == "heard_sound_out") {
+  //     prompt += `"heard_sound_out" means the child heard the phonemes of the word as help. `
+  //   }
+  // })
 
   return prompt
 }
@@ -245,16 +306,16 @@ function getUniqueTasksAndAssists(data: any) {
       tasks.add(item.task);
     }
     
-    if (item.assists) {
-      item.assists.forEach((assist: any) => {
-        assists.add(assist);
-      });
-    }
+    // if (item.assists) {
+    //   item.assists.forEach((assist: any) => {
+    //     assists.add(assist);
+    //   });
+    // }
   });
 
   return {
     tasks: Array.from(tasks),
-    assists: Array.from(assists)
+    // assists: Array.from(assists)
   };
 }
 
@@ -268,7 +329,7 @@ export async function newWordChainGameData(request: any, gameData: any | null = 
     if (progressError) throw new Error(progressError.message)
     
     let prompt = ""
-    prompt += composeProgressPrompt("early_literacy", progressData, "wordchain") + '\n\n'
+    prompt += composeProgressPrompt("early_literacy", progressData) + '\n\n'
     // console.log("prompt", prompt)"
     
     prompt += '\n\n' + PROMPT_LIST.createWordChainGame
@@ -283,7 +344,7 @@ export async function newWordChainGameData(request: any, gameData: any | null = 
 
   // decode the words
   const words =gameData.wordChain.map((e: any) => e.word)
-  const decodeDict = await decode(words, request)
+  const decodeDict = await decode(words)
   gameData.wordChain = gameData.wordChain.map((e: any) => { return {...e, "phonemes": decodeDict[e.word].phonemes, "decoded": decodeDict[e.word].decoded} }) 
   // console.log("decodeDict", decodeDict)
 

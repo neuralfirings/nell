@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { json, redirect, ActionFunction, ActionFunctionArgs, LoaderFunction, LoaderFunctionArgs } from '@remix-run/node';
 import { useActionData, useLoaderData, Form, useLocation} from '@remix-run/react'
-import { Container, Paper, Button, Alert, Title, Text, Anchor, Space, Group } from '@mantine/core'
+import { Container, Paper, Button, Alert, Title, Text, Anchor, Space, Group, Stack } from '@mantine/core'
 
 import { createSupabaseServerClient, createSuperbaseClient } from '@/app/supabase.server'
 import { Header } from '@/app/components/header'
@@ -72,8 +72,11 @@ export const loader: LoaderFunction = async  ({ request }: LoaderFunctionArgs) =
     .from('relationships')
     .select('id, relationship, user2!inner(id, name)')
     .eq('user1', account[0].id);
+  
+  // userInfo
+  const { data: userInfo } = await getUserInfo(request, true)
 
-  return { user, account, relationships }
+  return { user, account, relationships, userInfo }
 }
 
 export default function Page() {
@@ -86,14 +89,14 @@ export default function Page() {
 
   return (
     <>
-      {loaderData.user.app_metadata.logInAs != null && (
+      {loaderData.userInfo.isChild  == true && (
         <GrownUpValidator
           opened={dialogOpened}
           onClose={() => setDialogOpened(false)}
         />
       )}
 
-      {(!dialogOpened || loaderData.user.app_metadata.logInAs == null) && (
+      {(!dialogOpened || loaderData.userInfo.isChild == false ) && (
         <Container>
           
           <Header 
@@ -106,16 +109,16 @@ export default function Page() {
             
             {loaderData?.relationships.length > 0 && (<Text>Log in as</Text>)}
             <Group>
-              {loaderData?.relationships.length > 0 && (
+              {/* {loaderData?.relationships.length > 0 && ( */}
                 <Form method="post">
                   <input type="hidden" name="_action" value="loginas" />
                   <input type="hidden" name="user2" value="self" />
                   <input type="hidden" name="user1_id" value={loaderData.account[0].id} />
                   <input type="hidden" name="user1_name" value={loaderData.user.user_metadata.name} />
                   <input type="hidden" name="account_uid" value={loaderData.account[0].user_id} />
-                  <Button key="self" variant="primary" mt="md" type="submit">Self</Button>
+                  <Button key="self" variant="primary" mt="md" type="submit">{loaderData.userInfo.accountName} (the Grown Up)</Button>
                 </Form>
-              )}
+              {/* )} */}
               {loaderData?.relationships.map((r: any) => (
                 <Form method="post" key={r.id} >
                   <input type="hidden" name="_action" value="loginas" />
@@ -125,11 +128,11 @@ export default function Page() {
                   <Button variant="primary" mt="md" type="submit">{r.user2.name}</Button>
                 </Form>
               ))}
+              <Form action="/logout" method="post">
+                <input type="hidden" name="_action" value="signout" />
+                <Button  mt="md" variant="default" type="submit">Sign Out</Button>
+              </Form>  
             </Group>
-            <Form action="/logout" method="post">
-              <input type="hidden" name="_action" value="signout" />
-              <Button variant="default" type="submit">Sign Out</Button>
-            </Form>  
 
             <Space my="md" />
 

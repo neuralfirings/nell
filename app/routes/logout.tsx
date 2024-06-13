@@ -9,9 +9,6 @@ import Login from './test+/supabase+/sessionlogin'
 export const action = async ({ request }: ActionFunctionArgs) => {
   const { supabaseClient, headers } = createSupabaseServerClient(request)
   const { supAdmin } = createSuperbaseClient()
-  // console.log("old header >>>>>>", headers)
-
-  // const userInfo = await getUserInfo(request)
   const { data: { user } } = await supabaseClient.auth.getUser()
 
   // server client sign out
@@ -44,7 +41,7 @@ export default function Page() {
   const actionData = useActionData<typeof action>();
   return (
     <Container>
-      <Alert color="red">Uh oh, something went wrong.</Alert>
+      <Alert color="red">Use POST</Alert>
       <Space mt="lg" />
       <Code block>{JSON.stringify(actionData, null, 2)}</Code>
     </Container>

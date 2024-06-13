@@ -95,7 +95,8 @@ export const loader: LoaderFunction = async  ({ request }: LoaderFunctionArgs) =
   // redirect to login if not authenticated
   const { data: { user } } = await supabaseClient.auth.getUser()
   if (!user) { return redirect('/login') }
-  if (user.app_metadata.logInAs != null ) { return redirect('/dashboard') } // if log in as a child, redirect to dashboard
+  console.log("user", user)
+  if (user.app_metadata.logInAs?.isChild == true  ) { return redirect('/dashboard') } // if log in as a child, redirect to dashboard
 
   // get account data
   let {data: account }= await supabaseClient

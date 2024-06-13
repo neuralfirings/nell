@@ -1,3 +1,41 @@
+export function getSupaWordUrl() {
+  return process.env.SUPABASE_WORD_URL
+}
+
+// "don't give up!" => ["don't", "give", "up"]
+// will include: -, '
+export function getUniqueWords(text: string) {
+  const arr = text.toLowerCase().match(/[\w'-]+/g);
+  return [...new Set(arr)];
+}
+
+export function getUniqueWord(text: string) {
+  return getUniqueWords(text)[0];
+}
+
+// "hello!" => [0, 6, 7]
+// returns indices of punctuations (excl - and ')
+export function getNonMatchIndexes(word: string) {
+  const regex = /[\w'-]+/g;
+  const matches = [...word.matchAll(regex)];
+  const indexes = [];
+  let lastIndex = 0;
+
+  for (const match of matches) {
+    const matchIndex = match.index;
+    if (matchIndex > lastIndex) {
+      indexes.push(...Array.from({ length: matchIndex - lastIndex }, (_, i) => lastIndex + i));
+    }
+    lastIndex = matchIndex + match[0].length;
+  }
+
+  if (lastIndex < word.length) {
+    indexes.push(...Array.from({ length: word.length - lastIndex }, (_, i) => lastIndex + i));
+  }
+
+  return indexes;
+}
+
 export function levenshteinDistance(str1: string | any[], str2: string | any[]) {
   // console.log("levenshteinDistance", str1, str2)
   str2 = typeof(str2) == "object" ? str2.map(element => element.split('+')).flat() : str2

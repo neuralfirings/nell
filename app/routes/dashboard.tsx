@@ -25,6 +25,7 @@ export const action: ActionFunction = async ({ request }: ActionFunctionArgs) =>
 export const loader: LoaderFunction = async  ({ request }: LoaderFunctionArgs) => {
   const { data: userInfo, error: userInfoError} = await getUserInfo(request)
   if (userInfoError) { return redirect('/login') }
+  console.log("userInfo", userInfo)
   return json({userInfo})
 }
 

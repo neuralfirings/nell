@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { Button, Group, Flex} from "@mantine/core";
+import { Button, Group, Flex, UnstyledButton, Box} from "@mantine/core";
 import { useSwipeable } from "react-swipeable";
 import { decodedWord, graphemePhonemePair } from '@/app/definitions'
 import { PHONEME_AUDIO_LENGTH, SLOW_SOUND_OUT, FAST_SOUND_OUT, MEDIUM_SOUND_OUT } from "@/app/lib/configs";
+import { getNonMatchIndexes, getUniqueWord } from "@/app/lib/utils";
 
 // ex: "I am a cat"
 export function NellTextDisplay({text, decoded}: {text: string,  decoded: {[key: string]: decodedWord} | null}) {
@@ -18,24 +19,55 @@ export function NellTextDisplay({text, decoded}: {text: string,  decoded: {[key:
   )
 }
 
-export function NellWordDisplay({keyProp, word, decoded, status, onHelpActionRef}: 
-  {keyProp: number, word: string,  decoded: graphemePhonemePair[] | null, status: string | null, onHelpActionRef: (key: number, helpActionRef: (sp: number) => void) => void }
+export function NellWordDisplay({keyProp, word, decoded, status, onHelpActionRef, callBackPhonemeClick}: 
+  {
+    keyProp: number, 
+    word: string,  
+    decoded: graphemePhonemePair[] | null, 
+    status: string | null, 
+    onHelpActionRef: (key: number, helpActionRef: (sp: number) => void) => void ,
+    callBackPhonemeClick?: () => void | null
+  }
 ) {
   const [activeGrapheme, setActiveGrapheme] = useState<number | null>(null);
+
+  // decoded => decoded with cap
+  let wIdx = 0
+  let punctuationIndices = getNonMatchIndexes(word)
+  let decodedWithCap = []
+  if (decoded != null) {
+    for (let w=0, d=0; w<word.length; null) {
+      if (punctuationIndices.includes(w)) {
+        decodedWithCap.push([word[w], ""])
+        w++
+      } 
+      else {
+        decodedWithCap.push([
+          word.slice(w, w+decoded[d][0].length),
+          decoded[d][1]
+        ])
+        w += decoded[d][0].length
+        d++
+      }
+    }
+  }
 
   // click a phoneme
   const handlePhonemeClick = (phoneme: string) => () => {
     const audio = new Audio(`/audio/phonemes/${phoneme}.mp3`);
     audio.playbackRate = PHONEME_AUDIO_LENGTH / MEDIUM_SOUND_OUT
     audio.play()
+
+    if (typeof callBackPhonemeClick === 'function')
+      callBackPhonemeClick()
   }
 
   // sound out the word
   const soundOut = (speed: number) =>  {
-    console.log("soundOut", speed)
+    // console.log("soundOut", speed)
     let delay = 0;
-    decoded?.forEach((pair, index) => {
-      if (pair[1] != "*" && pair[1] != "_" && pair[1] != "?") {
+    decodedWithCap?.forEach((pair, index) => {
+      if (pair[1] != "*" && pair[1] != "_" && pair[1] != "?" && pair[1] != "") {
         // await playAudio(`/audio/phonemes/${pair[1]}.mp3`, Math.min(MEDIUM_SOUND_OUT, PHONEME_AUDIO_LENGTH / speed))
         setTimeout(() => {
           setActiveGrapheme(index);
@@ -53,10 +85,9 @@ export function NellWordDisplay({keyProp, word, decoded, status, onHelpActionRef
 
   // say the word
   const handleSayWordClick = (word: string) => {
-    console.log("handleSayWordClick", word)
-    // const audio = new Audio(`/audio/words/${word}.mp3`);
-    const audio = new Audio(`${process.env.SUPABASE_WORD_URL}/${word}.mp3`);
-    // audio.playbackRate = 1500 / 800
+    const justWord = getUniqueWord(word)
+    console.log("handleSayWordClick", justWord, `https://fdyaqvgimrebqczodjqq.supabase.co/storage/v1/object/public/nell/words/${justWord}.mp3`)
+    const audio = new Audio(`https://fdyaqvgimrebqczodjqq.supabase.co/storage/v1/object/public/nell/words/${justWord}.mp3`);
     audio.play()
   }
 
@@ -109,6 +140,9 @@ export function NellWordDisplay({keyProp, word, decoded, status, onHelpActionRef
 
   const vowels = ["a", "e", "i", "o", "u", "ee", "oa", "oi", "oo", "ou", "ow", "oy", "ea", "ie", "ai", "ay", "ey", "ea", "ie", "igh", "y", "er", "ir", "ur", "or", "ar", "aw", "au", "al", "oo", "ew", "ue", "ui", "eu", "oi", "oy", "ow", "ou", "air", "ear", "ure", "oor", "are", "eer", "ier"]
 
+  function ignorePhoneme(phoneme: string) {
+    return phoneme === "*" || phoneme === "_" || phoneme === "?" || phoneme === ""
+  }
   return (
     <>    
       <Flex direction="column" gap="sm" 
@@ -118,33 +152,44 @@ export function NellWordDisplay({keyProp, word, decoded, status, onHelpActionRef
         {...swipeHandlers} 
       >
         <Group {...swipeHandlers} gap={5}>
-          {decoded?.map((pair, index) => (
-            <Button
-              variant='light'
-              size="xl" 
-              key={index}
-              color={vowels.includes(pair[0]) ? "blue" : "red"}
-              style={{ 
-                fontSize: 64, height: 80, border: "none",
-                boxShadow: activeGrapheme === index ? "0 0 10px rgba(0,0,0,0.3)" : "none",
-              }} 
-              onClick={handlePhonemeClick(pair[1])}
-              px={5}
-            >
-              {pair[0]}
-            </Button>
+          {decodedWithCap?.map((pair, index) => (
+            ignorePhoneme(pair[1]) ?
+              <UnstyledButton
+                size="xl" 
+                key={index}
+                c="gray.6"
+                style={{ fontSize: 64, height: 80, lineHeight: "80px" }} 
+                px={5}
+                disabled
+              >
+                {pair[0]}
+              </UnstyledButton>
+            :
+              <Button
+                variant="light"
+                size="xl" 
+                key={index}
+                color={vowels.includes(pair[0]) ? "blue" : "red"}
+                style={{ 
+                  fontSize: 64, height: 80, border: "none",
+                  boxShadow: activeGrapheme === index ? "0 0 10px rgba(0,0,0,0.3)" : "none",
+                }} 
+                onClick={handlePhonemeClick(pair[1])}
+                px={5}
+              >
+                {pair[0]}
+            </Button> 
           ))}
         </Group>
-        {/* <Button onClick={handleSoundOutClick(decoded)}>Help</Button> */}
-        <Button onClick={() => handleSayWordClick(word)}
-          color="gray.3"
+        <Box bg={statusToColor(status)} style={{height: 15, borderRadius: 5}}></Box>
+        {/* Underline => sound out word */}
+        {/* <Button onClick={() => handleSayWordClick(word)}
+          color={statusToColor(status)} //"gray.3"
           style={{
             height: 15,
           }}
         >            
-        </Button>
-
-        {/* <Button onClick={() => {soundOut(600)}}>Sound Out</Button> */}
+        </Button> */}
       </Flex>
     </>
   )
