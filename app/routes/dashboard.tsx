@@ -55,8 +55,8 @@ export default function Page() {
         </Title>
 
         <Group justify="space-between" grow>
-          <Button size="xl" leftSection={<TiDocumentText />} component={Link} to="/g/read">Read</Button>
-          <Button size="xl" leftSection={<RiHexagonLine />} component={Link} to="/g/spell">Spell</Button>
+          <Button size="xl" leftSection={<TiDocumentText />} component={Link} to="/g/stories/new">Stories</Button>
+          <Button disabled size="xl" leftSection={<RiHexagonLine />} component={Link} to="/g/spell">Spell</Button>
           <Button size="xl" leftSection={<FaLink />} component={Link} to="/g/wordchain">Word Chain</Button>
         </Group>
       {/* </Paper> */}
