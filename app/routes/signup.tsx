@@ -32,7 +32,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   })
   console.log("signup data, error", data, error)
   if (error) {
-    return json({ success: false }, { headers })
+    return json({ error: error.message }, { headers })
   }
 
   // create account

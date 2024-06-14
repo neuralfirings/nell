@@ -4,7 +4,6 @@ import { createSupabaseServerClient, createSuperbaseClient } from '@/app/supabas
 import { getUserInfo } from '../lib/auth'
 import { useActionData } from '@remix-run/react'
 import { Alert, Code, Container, Space } from '@mantine/core'
-import Login from './test+/supabase+/sessionlogin'
 
 export const action = async ({ request }: ActionFunctionArgs) => {
   const { supabaseClient, headers } = createSupabaseServerClient(request)

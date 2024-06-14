@@ -13,7 +13,7 @@ export default function Index() {
 
         <Divider my="lg" />
         <Form method="post" action="/logout">
-          <Button type="submit" variant="transparent" mr="md" href="/logout">Log Out</Button>
+          <Button type="submit" variant="transparent" mr="md">Log Out</Button>
         </Form>
     </Container>
   );

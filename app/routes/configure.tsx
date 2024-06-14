@@ -203,9 +203,9 @@ export default function Page() {
           <div style={{ opacity: isTeacher ? 1 : 0.5 }}>
             <Group align="start" >
               <Title order={4}>My Students </Title>
-              <Anchor size="xl" onClick={isTeacher ? handleAddStudent : null}><IoMdAddCircleOutline /></Anchor>
+              <Anchor size="xl" onClick={isTeacher ? handleAddStudent : () => {}}><IoMdAddCircleOutline /></Anchor>
             </Group>
-            {students.map((student) => (
+            {students.map((student: any) => (
               <Box key={student.id} mt="md" >
                   <Group align="flex-end">
                     <TextInput
