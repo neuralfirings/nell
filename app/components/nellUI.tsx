@@ -19,12 +19,13 @@ export function NellTextDisplay({text, decoded}: {text: string,  decoded: {[key:
   )
 }
 
-export function NellWordDisplay({keyProp, word, decoded, status, onHelpActionRef, callBackPhonemeClick}: 
+export function NellWordDisplay({keyProp, word, decoded, status, monticolors, onHelpActionRef, callBackPhonemeClick}: 
   {
     keyProp: number, 
     word: string,  
     decoded: graphemePhonemePair[] | null, 
     status: string | null, 
+    monticolors?: boolean | null,
     onHelpActionRef: (key: number, helpActionRef: (sp: number) => void) => void ,
     callBackPhonemeClick?: () => void | null
   }
@@ -157,8 +158,8 @@ export function NellWordDisplay({keyProp, word, decoded, status, onHelpActionRef
               <UnstyledButton
                 size="xl" 
                 key={index}
-                c="gray.6"
-                style={{ fontSize: 64, height: 80, lineHeight: "80px" }} 
+                c="#555"
+                style={{ fontSize: 64, height: 80, lineHeight: "80px", fontWeight: "600" }} 
                 px={5}
                 disabled
               >
@@ -169,7 +170,7 @@ export function NellWordDisplay({keyProp, word, decoded, status, onHelpActionRef
                 variant="light"
                 size="xl" 
                 key={index}
-                color={vowels.includes(pair[0]) ? "blue" : "red"}
+                color={monticolors == null || monticolors == true ? vowels.includes(pair[0]) ? "blue" : "red" : "#555"}
                 style={{ 
                   fontSize: 64, height: 80, border: "none",
                   boxShadow: activeGrapheme === index ? "0 0 10px rgba(0,0,0,0.3)" : "none",

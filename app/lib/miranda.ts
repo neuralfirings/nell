@@ -52,7 +52,7 @@ export async function getActiveGames( gameId: number, request: any) {
     .select('*')
     .eq('user_id', userInfo?.profileId)
     .eq('status', 'active')
-    .eq('game_id', process.env.NELL_WORDCHAIN_ID)
+    .eq('game_id', gameId)
     .order('created_at', { ascending: false })
 
   if (!gameSessions || gameSessions?.length == 0) {
@@ -143,7 +143,7 @@ export async function generateNewGameGPT({subject, prompt, request}: {subject: s
 
 export async function generateGPTReponse(prompt: string) {
   console.log("in environment", process.env.NODE_ENV)
-  if (process.env.NODE_ENV == "development") {
+  if (false && process.env.NODE_ENV == "development") {
     const gptOutput = {
       "id": "chatcmpl-9WX1Ir5272P816jU3WiPSA15Z9jDP",
       "object": "chat.completion",
@@ -270,6 +270,7 @@ const PROMPT_LIST = {
 const fake_game_data = { "wordChain": [ { "word": "cat", "status": "new", "task": "decode" }, { "word": "rat", "status": "new", "task": "decode" }, { "word": "bat", "status": "new", "task": "decode" }, { "word": "hat", "status": "new", "task": "decode" }, { "word": "hot", "status": "new", "task": "decode" }, { "word": "dot", "status": "new", "task": "decode" }, { "word": "dog", "status": "new", "task": "decode" }, { "word": "dug", "status": "new", "task": "decode" }, { "word": "rug", "status": "new", "task": "decode" } ], "conceptExplanation": "These words practice the /a/ and /o/ sounds." }
 
 function composeProgressPrompt(subject: any, progressData: any) {
+  if (progressData.length == 0) return ""
   let prompt = `Here is some data which shows a child's ability engage in ${subject}.\n\n${JSON.stringify(progressData)}\n\n`
   
   const { tasks } =  getUniqueTasksAndAssists(progressData)
@@ -319,7 +320,7 @@ function getUniqueTasksAndAssists(data: any) {
   };
 }
 
-export async function newWordChainGameData(request: any, gameData: any | null = null) {
+export async function newWordChainGameData(request: any, gameData: any | null = null, level: any | null) {
   // generate AI if gameData = null
   console.log("newWordChainGameData", gameData)
   if (gameData == null) {
@@ -329,17 +330,19 @@ export async function newWordChainGameData(request: any, gameData: any | null = 
     if (progressError) throw new Error(progressError.message)
     
     let prompt = ""
-    prompt += composeProgressPrompt("early_literacy", progressData) + '\n\n'
-    // console.log("prompt", prompt)"
-    
-    prompt += '\n\n' + PROMPT_LIST.createWordChainGame
+    prompt += composeProgressPrompt("early_literacy", progressData) + '\n'
+    if (level && level != "") {
+      prompt += `Here's some information about the child's reading level: ${level}.\n`
+    }
+    prompt += "\n"
+    prompt += PROMPT_LIST.createWordChainGame
 
-    // console.log('prompt', prompt)
-    const { data: claudeResponseData, error: claudeResponseError } = await generateGPTReponse(prompt) //generateClaudeResponse(prompt)
-    console.log('Claud says', claudeResponseData, claudeResponseError)
-    claudeResponseData.wordChain = claudeResponseData.wordChain.map((e: any) => { return {"word": e, "status": "new", "task": "decode"} })
-    console.log('cleaned up game data', claudeResponseData)
-    gameData = claudeResponseData
+    console.log('prompt', prompt)
+    const { data: aiResponseData, error: aiREsponseError } = await generateGPTReponse(prompt) //generateClaudeResponse(prompt)
+    // console.log('Claud says', claudeResponseData, claudeResponseError)
+    aiResponseData.wordChain = aiResponseData.wordChain.map((e: any) => { return {"word": e, "status": "new", "task": "decode"} })
+    // console.log('cleaned up game data', claudeResponseData)
+    gameData = aiResponseData
   }  
 
   // decode the words

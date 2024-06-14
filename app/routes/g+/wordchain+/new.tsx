@@ -7,6 +7,7 @@ import { createSupabaseServerClient } from '@/app/supabase.server';
 import { newWordChainGameData } from '@/app/lib/miranda';
 import { NewWordChainGameButton } from '@/app/components/wordChainComponents';
 import { LoadingScreen } from '@/app/components/utils';
+import { getUniqueWords } from '@/app/lib/utils';
 // import { useTransition } from 'react';
 // import { Input } from 'postcss';
 
@@ -14,6 +15,8 @@ import { LoadingScreen } from '@/app/components/utils';
 export const action: ActionFunction = async ({ request }: ActionFunctionArgs) => {
   const formData = await request.formData()
   console.log("wc/new > action > ", Object.fromEntries(formData))
+  const level = formData.get('level') as string
+  console.log("level", level)
   
   const { data: userInfo}  = await getUserInfo(request)
   const { supabaseClient } = createSupabaseServerClient(request)
@@ -26,7 +29,7 @@ export const action: ActionFunction = async ({ request }: ActionFunctionArgs) =>
       "wordChain": wordsArr.map((word: string) => {return {word: word, "status": "new", "task": "decode"}}),
       "conceptExplanation": formData.get("concepts") as string
     }
-    gameData = await newWordChainGameData(request, gameInput)
+    gameData = await newWordChainGameData(request, gameInput, null)
   }
   else {
     // create game_data object, maybe call a prompt function or something
@@ -51,7 +54,7 @@ export const action: ActionFunction = async ({ request }: ActionFunctionArgs) =>
     // console.log("PROGRESS >>>>", data)
 
 
-    gameData = await newWordChainGameData(request)
+    gameData = await newWordChainGameData(request, null, level)
   }
 
   // create a progress object
@@ -83,9 +86,22 @@ export const action: ActionFunction = async ({ request }: ActionFunctionArgs) =>
   return redirect(`/g/wordchain`)
 }
 export const loader: LoaderFunction = async  ({ request }: LoaderFunctionArgs) => {
-  // do stuff
-  // return json({ success: true })
-  return null
+  const { data: userInfo, error: userInfoError } = await getUserInfo(request)
+  if (userInfoError) { return redirect('/login') } // redirect to login if not authenticated
+
+  const { supabaseClient } = createSupabaseServerClient(request)
+  const { data: progressData, error: progressError } = await supabaseClient
+    .from('progress')
+    .select('word')
+    .eq('account_id', userInfo?.profileId)
+    .eq('subject', 'early_literacy')
+    .limit(20)
+  
+  const uniqueWords = getUniqueWords(progressData?.map((item: any) => item.word).join(" ") as string)
+  // console.log(uniqueWords)
+  const needManualLeveling = uniqueWords.length <= 10 ? true : false
+
+  return json({needManualLeveling})
 }
 
 export default function Page() {
@@ -99,7 +115,24 @@ export default function Page() {
       <Stack gap="md">
         <Title>New Word Chain Game</Title>
 
-        <NewWordChainGameButton text="Auto Generate Game" variant="filled"/>
+        {/* <NewWordChainGameButton text="Auto Generate Game" variant="filled"/> */}
+
+        <Form method="post" action="/g/wordchain/new">
+          {loaderData.needManualLeveling && (
+            <>
+              <Alert color="red" mb="md">We don't have enough data on your reading level. Please tell me a bit about where you area in your literacy journey.</Alert>
+              <TextInput 
+                name="level"
+                label="Rough reading level"
+                placeholder="ex: Kindergarten level, can read CVC words, working on long vowels, etc."
+                description="Once we get more data through this app, you will not need to provide this information."
+                required
+                mb="sm"
+              />
+            </>
+          )}
+          <Button variant='filled' type="submit">Auto Generate Game</Button>
+        </Form>
         or
         <Form method="post">
           <input type="hidden" name="_action" value="manual" />

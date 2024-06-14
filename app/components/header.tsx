@@ -11,7 +11,8 @@ export function Header({ pageTitle, name, child }: { pageTitle: string, name: st
           <Group>
             <Title order={4}>{pageTitle}</Title>
             {pageTitle == "Word Chain" && <Button variant="transparent" component={Link} to="/g/wordchain/new">New</Button>}
-            {pageTitle == "Word Chain" && <NewWordChainGameButton variant="transparent" text="I'm feeling lucky" />}
+            {pageTitle == "Stories" && <Button variant="transparent" component={Link} to="/g/stories/new">New</Button>}
+            {/* {pageTitle == "Word Chain" && <NewWordChainGameButton variant="transparent" text="I'm feeling lucky" />} */}
           </Group>
           <Group justify="end" align="center">
             <Text>Hi, {name}</Text>

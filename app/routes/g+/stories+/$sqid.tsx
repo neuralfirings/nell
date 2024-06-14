@@ -1,6 +1,6 @@
 import { json, redirect, ActionFunction, ActionFunctionArgs, LoaderFunction, LoaderFunctionArgs } from '@remix-run/node';
 import { useActionData, useLoaderData, Form, useNavigation, useSubmit, useFetcher, useSearchParams} from '@remix-run/react'
-import { Container, Paper, Button, Alert, Title, Text, Anchor, Space, Code, Group, UnstyledButton } from '@mantine/core'
+import { Container, Paper, Button, Alert, Title, Text, Anchor, Space, Code, Group, UnstyledButton, ActionIcon } from '@mantine/core'
 import { LoadingScreen } from '@/app/components/utils';
 import { desqidify } from '@/app/lib/utils.server';
 import { createSupabaseServerClient } from '@/app/supabase.server';
@@ -8,6 +8,8 @@ import { NellWordDisplay } from '@/app/components/nellUI';
 import { useEffect, useRef, useState } from 'react';
 import { PHONEME_AUDIO_LENGTH, SLOW_SOUND_OUT, FAST_SOUND_OUT, MEDIUM_SOUND_OUT } from "@/app/lib/configs";
 import { getUniqueWord, getUniqueWords } from '@/app/lib/utils';
+import { FaArrowRight, FaCheck, FaCheckDouble, FaInfo, FaX } from 'react-icons/fa6';
+import { FaInfoCircle, FaSave, FaUndo } from 'react-icons/fa';
 
 export const action: ActionFunction = async ({ request }: ActionFunctionArgs) => {
   const formData = await request.formData()
@@ -84,7 +86,7 @@ export default function Page() {
 
   const states = loaderData.states
   const [progress, setProgress] = useState(loaderData.gameData.progress) //loaderData.gameData.progress)
-  const [currWordStatus, setCurrWordStatus] = useState("new") 
+  const [currWordStatus, setCurrWordStatus] = useState("") 
   const [wordStatuses, setWordStatuses] = useState(progress.pages[currentPageIndex].wordStatuses || Array(currentPageWords.length).fill("")) //(word.status);
   const [currWordIndex, setCurrWordIndex] = useState(wordStatuses.findIndex((status: string) => status == "") || 0);
 
@@ -118,16 +120,27 @@ export default function Page() {
   };
   // #endregion
 
-  function handleNextWord() {
+  function handleNextWord(status: string | null) {
+    console.log("next word", status)
     const t = JSON.parse(JSON.stringify(progress))
     if (t.pages[currentPageIndex].status === "new") {
       t.pages[currentPageIndex].status = "in progress"
     }
-    const wordStatus = helpSpeed < FAST_SOUND_OUT 
-      ? "couldNotRead" 
-      : helpSpeed == SLOW_SOUND_OUT && (currWordStatus == "" || currWordStatus == "new")
-        ? "read"
-        : "readWithHelp"
+
+    // define local var wordStatus
+    let wordStatus = ""
+    if (status == null) {
+      wordStatus = helpSpeed < FAST_SOUND_OUT 
+        ? "couldNotRead" 
+        : helpSpeed == SLOW_SOUND_OUT && (currWordStatus == "" || currWordStatus == "new")
+          ? "read"
+          : "readWithHelp"
+    }
+    else {
+      wordStatus = status
+    }
+
+    // add assists to progress
     if (wordStatus == "readWithHelp") {
       if (t.pages[currentPageIndex].assists["heard_sound_out"] == undefined)
         t.pages[currentPageIndex].assists["heard_sound_out"] = []
@@ -139,6 +152,8 @@ export default function Page() {
       t.pages[currentPageIndex].assists["heard_word"].push(getUniqueWord(currentPageWords[currWordIndex]))    
     }
     setProgress(t)
+
+    // set word status to read if not already done
     if (currWordStatus == "") {
       setCurrWordStatus("read")
     }
@@ -186,6 +201,7 @@ export default function Page() {
       action: `/g/stories/${loaderData.sqid}/save`
     })
   }
+
   // useEffect(() => {
   //   if (fetcher.data) {
   //     console.log("fetched", fetcher.data)
@@ -195,7 +211,12 @@ export default function Page() {
   return (
     <Container style={{width: "100%"}}>
       {navigation.state === 'submitting' && (<LoadingScreen />)}
-      Page {currentPageIndex+1} of {loaderData.gameData.progress.pages.length}
+      <Group justify="space-between">
+        <div>
+          Page {currentPageIndex+1} of {loaderData.gameData.progress.pages.length}
+        </div>
+        <ActionIcon radius="xl" onClick={handleSaveProgress} variant="light"><FaSave /></ActionIcon>
+      </Group>
       <Paper withBorder shadow="sm" p="md" my="sm" radius="md" >
         <Group justify="center">
           {currentPageWords.map((word: string, index: number) => (
@@ -205,16 +226,25 @@ export default function Page() {
               word={word} 
               decoded={dict[getUniqueWords(word.toLowerCase())[0]].decoded} 
               status={wordStatuses[index]}
+              monticolors={false}
               onHelpActionRef={saveHelpActionRef}
               callBackPhonemeClick={() => handlePhonemeHelped(index)}
             />
           ))}
         </Group>
         <Group justify="center">
-          <Button my="md" onClick={() => handleHelpClick(currWordIndex)}>Hint</Button>
-          <UnstyledButton onClick={handleNextWord}>Next Word</UnstyledButton>
-          <UnstyledButton onClick={handleUndoCurrWord}>Undo</UnstyledButton>
-          <UnstyledButton onClick={handleSaveProgress}>Save</UnstyledButton>
+          <Button my="md" onClick={() => handleHelpClick(currWordIndex)}><FaInfoCircle />&nbsp;Hint</Button>
+        </Group>
+        <Group justify="right">
+          <ActionIcon radius="xl" size="md" variant="subtle" color="gray.3" onClick={() => handleNextWord("couldNotRead")}><FaX /></ActionIcon>
+          <ActionIcon radius="xl" size="md" variant="subtle" color="gray.3" onClick={() => handleNextWord("readWithHelp")}><FaCheck /></ActionIcon>
+          <ActionIcon radius="xl" size="md" variant="subtle" color="gray.3" onClick={() => handleNextWord("read")}><FaCheckDouble /></ActionIcon>
+          <ActionIcon radius="xl" size="md" variant="subtle" color="gray.3" onClick={handleUndoCurrWord}><FaUndo /></ActionIcon>
+          <ActionIcon radius="xl" size="md" variant="subtle" color="gray.3" onClick={() => handleNextWord(null)}><FaArrowRight /></ActionIcon>
+          {/* <UnstyledButton onClick={() => handleNextWord(null)}>Next</UnstyledButton> */}
+          {/* <UnstyledButton onClick={handleUndoCurrWord}>Undo</UnstyledButton> */}
+          {/* <UnstyledButton onClick={handleSaveProgress}>Save</UnstyledButton> */}
+          {/* <UnstyledButton onClick={() => console.log(currWordIndex, currWordStatus, wordStatuses)}>Get Word Status</UnstyledButton> */}
         </Group>
       </Paper>
       {/* <Code block>
