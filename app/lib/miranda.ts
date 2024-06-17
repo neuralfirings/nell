@@ -89,14 +89,8 @@ const SYSTEM_CONTENTS: any = {
 }
 export async function generateNewGameGPT({subject, prompt, request}: {subject: string, prompt: string, request: any}) {
   // fake data for dev
-  if (false && process.env.NODE_ENV == "development") {
+  if (true && process.env.NODE_ENV == "development") {
     console.log("FAKE IT TIL YOU MAKE IT!")
-    // const progressData = await getProgress(request, subject)
-    // if (progressData.error) return { error: progressData.error }
-    // console.log("error", progressData.data)
-    // const progressPrompt = composeProgressPrompt(subject, progressData.data)
-    // console.log("progressPrompt", progressPrompt)
-    // await new Promise(r => setTimeout(r, 1000))
     const referer = request.headers.get("referer")
     if (referer.includes("/g/stories")) {
       return {

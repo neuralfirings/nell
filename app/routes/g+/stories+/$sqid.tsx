@@ -1,6 +1,6 @@
 import { json, redirect, ActionFunction, ActionFunctionArgs, LoaderFunction, LoaderFunctionArgs } from '@remix-run/node';
 import { useActionData, useLoaderData, Form, useNavigation, useSubmit, useFetcher, useSearchParams} from '@remix-run/react'
-import { Container, Paper, Button, Alert, Title, Text, Anchor, Space, Code, Group, UnstyledButton, ActionIcon } from '@mantine/core'
+import { Container, Paper, Button, Alert, Title, Text, Anchor, Space, Code, Group, UnstyledButton, ActionIcon, Box } from '@mantine/core'
 import { LoadingScreen } from '@/app/components/utils';
 import { desqidify } from '@/app/lib/utils.server';
 import { createSupabaseServerClient } from '@/app/supabase.server';
@@ -10,6 +10,8 @@ import { PHONEME_AUDIO_LENGTH, SLOW_SOUND_OUT, FAST_SOUND_OUT, MEDIUM_SOUND_OUT 
 import { getUniqueWord, getUniqueWords } from '@/app/lib/utils';
 import { FaArrowRight, FaCheck, FaCheckDouble, FaInfo, FaX } from 'react-icons/fa6';
 import { FaInfoCircle, FaSave, FaUndo } from 'react-icons/fa';
+import YayWidget from '@/app/components/yays';
+import { randomId } from '@mantine/hooks';
 
 export const action: ActionFunction = async ({ request }: ActionFunctionArgs) => {
   const formData = await request.formData()
@@ -55,8 +57,10 @@ export const loader: LoaderFunction = async  ({ request, params }: LoaderFunctio
       .catch(error => { console.error('Error:', error); });
   // }
   // #endregion
+
+  // random seed for yays
  
-  return json({ currentPageIndex, currentPage, gameData: data, sqid: sqid })
+  return json({ currentPageIndex, currentPage, gameData: data, sqid: sqid, random: Math.random() })
 }
 
 export default function Page() {
@@ -67,17 +71,18 @@ export default function Page() {
   const currentPageWords = loaderData.currentPage.text.text.split(" ")
   const dict = loaderData.gameData.game_data.dict
   const currentPageIndex = loaderData.currentPageIndex
+  const [showYay, setShowYay] = useState(false)
 
-  useEffect(() => {
-    const url = new URL(window.location.href);
-    const refreshParam = url.searchParams.get("refresh");
-    if (refreshParam == "clean") {
-      console.log("so fresh and so clean clean")
-      url.searchParams.delete("refresh");
-      window.history.replaceState({}, document.title, url.toString());
-      window.location.reload();
-    }
-  })
+  // useEffect(() => {
+  //   const url = new URL(window.location.href);
+  //   const refreshParam = url.searchParams.get("refresh");
+  //   if (refreshParam == "clean") {
+  //     console.log("so fresh and so clean clean")
+  //     url.searchParams.delete("refresh");
+  //     window.history.replaceState({}, document.title, url.toString());
+  //     window.location.reload();
+  //   }
+  // })
 
  
   const submit = useSubmit()
@@ -121,7 +126,12 @@ export default function Page() {
   // #endregion
 
   function handleNextWord(status: string | null) {
-    console.log("next word", status)
+    // console.log("next word", status)
+    console.log("handleNextWord", wordStatuses)
+    if (wordStatuses.filter((status: string) => status == "" || status == "new").length == 0) {
+      handleSaveProgress() 
+      return 
+    }
     const t = JSON.parse(JSON.stringify(progress))
     if (t.pages[currentPageIndex].status === "new") {
       t.pages[currentPageIndex].status = "in progress"
@@ -161,6 +171,11 @@ export default function Page() {
     setCurrWordIndex(currWordIndex + 1)
     setHelpSpeed(SLOW_SOUND_OUT)
     setCurrWordStatus("")
+
+    if (currWordIndex == currentPageWords.length-1) {
+      console.log("endgame!")
+      setShowYay(true)
+    }
     // console.log("wordStatuses", wordStatuses) 
   }
   function handleUndoCurrWord() {
@@ -175,6 +190,7 @@ export default function Page() {
 
       setProgress(t)
       setCurrWordIndex(currWordIndex - 1)
+      setShowYay(false)
     }
   }
   function handleSaveProgress() {
@@ -186,8 +202,6 @@ export default function Page() {
     if (currWordIndex == currentPageWords.length) {
       console.log("page done")
       t.pages[currentPageIndex].status = "done"
-      // setProgress(t)
-      // console.log("post set progress", progress.pages[0])
     }
     // save progress by calling /save action
     const formData = new FormData();
@@ -200,6 +214,16 @@ export default function Page() {
       method: "post", 
       action: `/g/stories/${loaderData.sqid}/save`
     })
+
+    // reset states for next page
+    if (currWordIndex == currentPageWords.length && currentPageIndex < progress.pages.length-1) {
+      setWordStatuses(Array(progress.pages[currentPageIndex+1].text.split(" ").length).fill(""))
+      setCurrWordIndex(0)
+      setCurrWordStatus("")
+      setHelpSpeed(SLOW_SOUND_OUT)
+      setProgress(t)
+      setShowYay(false)
+    }
   }
 
   // useEffect(() => {
@@ -218,6 +242,7 @@ export default function Page() {
         <ActionIcon radius="xl" onClick={handleSaveProgress} variant="light"><FaSave /></ActionIcon>
       </Group>
       <Paper withBorder shadow="sm" p="md" my="sm" radius="md" >
+        { showYay && (<Box mb="lg"><YayWidget r={loaderData.random} /></Box>)}
         <Group justify="center">
           {currentPageWords.map((word: string, index: number) => (
             <NellWordDisplay  
@@ -235,21 +260,17 @@ export default function Page() {
         <Group justify="center">
           <Button my="md" onClick={() => handleHelpClick(currWordIndex)}><FaInfoCircle />&nbsp;Hint</Button>
         </Group>
-        <Group justify="right">
-          <ActionIcon radius="xl" size="md" variant="subtle" color="gray.3" onClick={() => handleNextWord("couldNotRead")}><FaX /></ActionIcon>
-          <ActionIcon radius="xl" size="md" variant="subtle" color="gray.3" onClick={() => handleNextWord("readWithHelp")}><FaCheck /></ActionIcon>
-          <ActionIcon radius="xl" size="md" variant="subtle" color="gray.3" onClick={() => handleNextWord("read")}><FaCheckDouble /></ActionIcon>
-          <ActionIcon radius="xl" size="md" variant="subtle" color="gray.3" onClick={handleUndoCurrWord}><FaUndo /></ActionIcon>
-          <ActionIcon radius="xl" size="md" variant="subtle" color="gray.3" onClick={() => handleNextWord(null)}><FaArrowRight /></ActionIcon>
-          {/* <UnstyledButton onClick={() => handleNextWord(null)}>Next</UnstyledButton> */}
-          {/* <UnstyledButton onClick={handleUndoCurrWord}>Undo</UnstyledButton> */}
-          {/* <UnstyledButton onClick={handleSaveProgress}>Save</UnstyledButton> */}
-          {/* <UnstyledButton onClick={() => console.log(currWordIndex, currWordStatus, wordStatuses)}>Get Word Status</UnstyledButton> */}
-        </Group>
       </Paper>
       {/* <Code block>
         {JSON.stringify({actionData, loaderData}, null, 2)}
       </Code> */}
+        <Group justify="right" style={{position: "fixed", bottom: "5px", right: "10px", background: "white", opacity: 0.2}}>
+          <ActionIcon radius="xl" size="md" variant="subtle" color="gray.9" onClick={() => handleNextWord("couldNotRead")}><FaX /></ActionIcon>
+          <ActionIcon radius="xl" size="md" variant="subtle" color="gray.9" onClick={() => handleNextWord("readWithHelp")}><FaCheck /></ActionIcon>
+          <ActionIcon radius="xl" size="md" variant="subtle" color="gray.9" onClick={() => handleNextWord("read")}><FaCheckDouble /></ActionIcon>
+          <ActionIcon radius="xl" size="md" variant="subtle" color="gray.9" onClick={handleUndoCurrWord}><FaUndo /></ActionIcon>
+          <ActionIcon radius="xl" size="md" variant="subtle" color="gray.9" onClick={() => handleNextWord(null)}><FaArrowRight /></ActionIcon>
+        </Group>
     </Container>
   )
 }

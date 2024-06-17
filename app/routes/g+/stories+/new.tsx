@@ -2,7 +2,7 @@ import { Suspense, useEffect, useState } from 'react';
 import { json, redirect, ActionFunction, ActionFunctionArgs, LoaderFunction, LoaderFunctionArgs } from '@remix-run/node';
 import { useActionData, useLoaderData, Form, useNavigation, useSubmit, Await} from '@remix-run/react'
 import { useDisclosure } from '@mantine/hooks';
-import { Container, Paper, Button, Alert, Title, Text, Anchor, Space, Divider, TextInput, Radio, Textarea, Group, Stack} from '@mantine/core'
+import { Container, Paper, Button, Alert, Title, Text, Anchor, Space, Divider, TextInput, Radio, Textarea, Group, Stack, ActionIcon, Box} from '@mantine/core'
 
 import { createSupabaseServerClient } from '@/app/supabase.server'
 import { Header } from '@/app/components/header';
@@ -14,6 +14,8 @@ import { generateNewGameGPT } from '@/app/lib/miranda.ts';
 import { decode } from '@/app/lib/decode.tsx';
 import { sqidify } from '@/app/lib/utils.server';
 import { getUniqueWords } from '@/app/lib/utils';
+import { FaTrash, FaX } from 'react-icons/fa6';
+import { MdOutlineDeleteForever } from 'react-icons/md';
 
 export const action: ActionFunction = async ({ request }: ActionFunctionArgs) => {
   const formData = await request.formData()
@@ -67,7 +69,7 @@ export const action: ActionFunction = async ({ request }: ActionFunctionArgs) =>
   
     prompt += `Explain what phonemic concepts or reading skills are utilized in this story. `
     prompt += `Return a JSON object like this: { "pages": ["Lorem ipsum dolor sit amet. Aenean id porttitor elit.", "Donec vestibulum risus sit amet turpis tristique scelerisque. Nulla quis sagittis sapien."], "conceptExplanation": "In the past, ${readerName} seems to do well in XX but struggle with XX. This story practices XX."}\n\n`
-    prompt += `Return only minified JSON object without any markdown tags.`
+    prompt += `Return only minified JSON object without any markdown tags. Please ensure all dialogue or quotes within the story are enclosed in double quotes.`
   
     // Generate the story JSON
     const {data, error} = await generateNewGameGPT({
@@ -124,10 +126,10 @@ export const loader: LoaderFunction = async  ({ request }: LoaderFunctionArgs) =
     .select('word')
     .eq('account_id', userInfo?.profileId)
     .eq('subject', 'early_literacy')
-    .limit(20)
+    .limit(50)
   
   const uniqueWords = getUniqueWords(progressData?.map((item: any) => item.word).join(" ") as string)
-  // console.log(uniqueWords)
+  console.log(uniqueWords, uniqueWords.length, progressData)
   const needManualLeveling = uniqueWords.length <= 10 ? true : false
 
   return json({userInfo, needManualLeveling})
@@ -138,7 +140,7 @@ export default function Page() {
   const navigation = useNavigation();
   const actionData = useActionData<typeof action>();
   const loaderData = useLoaderData<typeof loader>();
-  const  userInfo = loaderData.userInfo
+  const userInfo = loaderData.userInfo
   const userLogInAs = userInfo.userLogInAs
   const accountName = userInfo.accountName
   const profileName = userInfo.profileName
@@ -146,7 +148,7 @@ export default function Page() {
   // console.log("loaderData", loaderData)
   
   // for step 2: preview story
-  const [pages, setPages] = useState<string[]>([]);  
+  const [pages, setPages] = useState<string[]>([""]);  
   useEffect(() => {
     if (actionData && actionData.preview)
       setPages(actionData.data.pages)
@@ -166,6 +168,8 @@ export default function Page() {
 
   return (
     <>
+
+      <Title order={2} mt="lg" mb="sm">Generate Story with AI</Title>
       <Form method="post">
         <input type="hidden" name="_action" value="generate" />
         <Stack>
@@ -227,29 +231,46 @@ export default function Page() {
         </Stack>
       </Form>
 
-      {actionData?.preview && (
+      <Divider my="xl" label="OR" />
+
+      <Title order={2} mb="sm">
+        {!actionData?.preview && "Write a Story"}
+        {actionData?.preview && "Story Preview"}
+      </Title>
+      
+      {/* {actionData?.preview && ( */}
           <>
-            <Title order={2} mt="lg" mb="sm">Story Preview</Title>
             <Form method="post" onSubmit={handleStorySubmit}>
               <input type="hidden" name="_action" value="save" />
-              <input type="hidden" name="conceptExplanation" value={actionData.data.conceptExplanation} />
-              <Alert color="blue" mb="md">{actionData.data.conceptExplanation}</Alert>
+              {actionData?.data?.conceptExplanation && (
+                <>
+                  <input type="hidden" name="conceptExplanation" value={actionData?.data?.conceptExplanation} />
+                  <Alert color="blue" mb="md">{actionData.data.conceptExplanation}</Alert>
+                </>
+              )}
+              
                 {pages.map((page: string, index: number) => (
-                  <Textarea
-                    key={index}
-                    label={`Page ${index + 1}`}
-                    placeholder="Enter text for this page"
-                    value={page}
-                    onChange={(event) => handlePagesChange(index, event.currentTarget.value)}
-                    required
-                    mt="md"
-                  />
+                  <Box key={index}>
+                    <Textarea
+                      label={`Page ${index + 1}`}
+                      placeholder="Enter text for this page"
+                      value={page}
+                      onChange={(event) => handlePagesChange(index, event.currentTarget.value)}
+                      required
+                      mt="md"
+                    />
+                    <ActionIcon size="sm" color="red.3" mt={3} radius="xl" variant="outline" onClick={() => setPages(pages.filter((_, i) => i !== index))}><FaX size={12} /></ActionIcon>
+                  </Box>
                 ))}
-              <Button variant="primary" mt="md" type="submit" disabled={navigation.state === 'submitting'}>Let's Read!</Button>
+              <Space mt="md" />
+              <Anchor variant="light" onClick={() => setPages([...pages, ""])}>Add Page</Anchor>
+              <br />
+              {/* <Divider my="sm" /> */}
+              <Button variant="primary" mt="md" type="submit" disabled={navigation.state === 'submitting' || pages.length == 0}>Let's Read!</Button>
             </Form>
           </>
-        )
-      }
+        {/* ) */}
+      {/* } */}
       
       {actionData?.action && (
         <>

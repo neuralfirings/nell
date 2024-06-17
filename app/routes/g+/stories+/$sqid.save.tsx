@@ -62,7 +62,7 @@ export const action: ActionFunction = async ({ request, params }: ActionFunction
   }
   else {
     console.log("next page!")
-    return redirect(`/g/stories/${sqid}?refresh=clean`)
+    return redirect(`/g/stories/${sqid}`) //?refresh=clean
   }
 }
 
